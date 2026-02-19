@@ -38,6 +38,9 @@ def render(conn, catalogos):
                     q.F_Conclusion,
                     q.F_EntradaSG,
                     q.GrupoVulnerable,
+                    q.[Organismo emisor],
+                    q.[Tipo De Violencia],
+                    q.AmbitoModalidadViolencia,
                     q.Notas,
                     q.Notificado
                 FROM Expediente q
@@ -54,10 +57,17 @@ def render(conn, catalogos):
                         estatus_actual = df['Conclusión'].iloc[0] if df['Conclusión'].iloc[0] else "Sin estatus"
                         st.metric("Estatus Actual", estatus_actual)
                         st.metric("Desglose", df['Alias_Conclusión'].iloc[0] if df['Alias_Conclusión'].iloc[0] else "Sin estatus")
-                        st.metric("Fecha de Entrada a SG", df['F_EntradaSG'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['F_EntradaSG'].iloc[0]) else "N/A")
-                        st.metric("Fecha de Conclusión", df['F_Conclusion'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['F_Conclusion'].iloc[0]) else "N/A")
-                        st.metric("Grupo Vulnerable", df['GrupoVulnerable'].iloc[0])
-                        st.metric("Notas", df['Notas'].iloc[0])
+                        col_met1, col_met2 = st.columns(2)
+                        with col_met1:
+                            st.metric("Fecha de Entrada a SG", df['F_EntradaSG'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['F_EntradaSG'].iloc[0]) else "N/A")
+                            st.metric("Fecha de Conclusión", df['F_Conclusion'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['F_Conclusion'].iloc[0]) else "N/A")
+                            st.metric("Grupo Vulnerable", df['GrupoVulnerable'].iloc[0])
+                            st.metric("Notas", df['Notas'].iloc[0])
+                        with col_met2:
+                            st.metric("Organismo Emisor", df['Organismo emisor'].iloc[0])
+                            st.metric("Notificado", "Sí" if df['Notificado'].iloc[0] else "No")
+                            st.metric("Tipo de Violencia", df['Tipo De Violencia'].iloc[0])
+                            st.metric("Ámbito/Modalidad de Violencia", df['AmbitoModalidadViolencia'].iloc[0])
                     
                     # Formulario para modificar estatus
                     st.subheader("📝 Actualizar Estatus")
@@ -80,13 +90,18 @@ def render(conn, catalogos):
                             
                             fecha_conclusion = st.date_input(
                                 "Fecha de Conclusión",
-                                value=datetime.now(),
+                                value=None,
                                 help="Fecha en que se concluyó el expediente"
-                            ).strftime("%d/%m/%Y")
+                            )
 
                             grupo_vulnerable = st.selectbox(
                                 "Grupo Vulnerable",
                                 options=[""] + opciones_gv,
+                                index=0
+                            )
+                            organismo_emisor = st.selectbox(
+                                "Organismo Emisor",
+                                options=[""] + catalogos.get('organismoemisor', []),
                                 index=0
                             )
                         
@@ -99,9 +114,9 @@ def render(conn, catalogos):
                             )
                             fecha_entrada = st.date_input(
                                 "Fecha Entrada a SG",
-                                value=datetime.now(),
+                                value=None,
                                 help="Fecha en que entró a Secretaría General"
-                            ).strftime("%d/%m/%Y")
+                            )
                             tipo_violencia = st.selectbox(
                                 'Tipo de Violencia',
                                 options=[""]+opciones_tv,
@@ -129,7 +144,7 @@ def render(conn, catalogos):
                                     params = [nuevo_estatus,desglose]
                                     
                                     # Si hay fecha de conclusión, convertirla
-                                    if fecha_conclusion and fecha_conclusion.strip():
+                                    if fecha_conclusion:
                                         try:
                                             fecha_conv = datetime.strptime(fecha_conclusion, "%d/%m/%Y").date()
                                             params.append(fecha_conv)
@@ -138,7 +153,7 @@ def render(conn, catalogos):
                                     else:
                                         params.append(None)
                                     # Si hay fecha de SG, convertirla
-                                    if fecha_entrada and fecha_entrada.strip():
+                                    if fecha_entrada:
                                         try:
                                             fecha_conv = datetime.strptime(fecha_entrada, "%d/%m/%Y").date()
                                             params.append(fecha_conv)
@@ -148,6 +163,10 @@ def render(conn, catalogos):
                                         params.append(None)
                                     if grupo_vulnerable:
                                         params.append(grupo_vulnerable)
+                                    else:
+                                        params.append(None)
+                                    if organismo_emisor:
+                                        params.append(organismo_emisor)
                                     else:
                                         params.append(None)
                                     if tipo_violencia:
@@ -169,6 +188,7 @@ def render(conn, catalogos):
                                             F_Conclusion = ?,
                                             F_EntradaSG = ?,
                                             GrupoVulnerable = ?,
+                                            [Organismo emisor] = ?,
                                             [Tipo De Violencia] = ?,
                                             AmbitoModalidadViolencia = ?
                                         WHERE Expediente = ?

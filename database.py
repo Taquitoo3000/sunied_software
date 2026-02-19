@@ -21,6 +21,7 @@ def get_connection():
 @st.cache_resource
 def get_connection_access():
     try:
+        #archivo_access = 'D:/database.mdb'
         archivo_access = 'D:/concentrado 2000-2026.mdb'
         conn_str = (
             r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
