@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from queries import buscar_expedientes
+import plotly.express as px
 
 def render(conn, catalogos):
     st.header("🔄 Modificar Estatus de Expediente")
@@ -26,7 +27,7 @@ def render(conn, catalogos):
             st.write("")
             buscar_btn = st.button("🔍 Buscar", use_container_width=True, type="primary")
         
-        if buscar_btn and expediente_buscar:
+        if buscar_btn or expediente_buscar:
             with st.spinner("Buscando expediente..."):
                 # Buscar expediente
                 query = """
@@ -67,6 +68,9 @@ def render(conn, catalogos):
                         with col_est1:
                             # Opciones de estatus
                             opciones_estatus = catalogos.get('Status', [])
+                            opciones_gv = catalogos.get('grupovulnerable', [])
+                            opciones_tv = catalogos.get('TipoViolencia', [])
+                            opciones_av = catalogos.get('AmbitoViolencia', [])
                             
                             nuevo_estatus = st.selectbox(
                                 "Nuevo Estatus *",
@@ -79,6 +83,12 @@ def render(conn, catalogos):
                                 value=datetime.now(),
                                 help="Fecha en que se concluyó el expediente"
                             ).strftime("%d/%m/%Y")
+
+                            grupo_vulnerable = st.selectbox(
+                                "Grupo Vulnerable",
+                                options=[""] + opciones_gv,
+                                index=0
+                            )
                         
                         with col_est2:
                             desglose = st.selectbox(
@@ -86,6 +96,21 @@ def render(conn, catalogos):
                                 options=[""] + catalogos.get('Alias_Status', []),
                                 index=0,
                                 help="Selecciona un desglose para el estatus"
+                            )
+                            fecha_entrada = st.date_input(
+                                "Fecha Entrada a SG",
+                                value=datetime.now(),
+                                help="Fecha en que entró a Secretaría General"
+                            ).strftime("%d/%m/%Y")
+                            tipo_violencia = st.selectbox(
+                                'Tipo de Violencia',
+                                options=[""]+opciones_tv,
+                                index=0
+                            )
+                            ambito_violencia = st.selectbox(
+                                'Ambito de Violencia',
+                                options=[""]+opciones_av,
+                                index=0
                             )
                         
                         # Botón para guardar
@@ -112,29 +137,51 @@ def render(conn, catalogos):
                                             params.append(None)
                                     else:
                                         params.append(None)
-                                    
-                                    # Agregar observaciones
-                                    params.append(desglose if desglose and desglose.strip() else None)
+                                    # Si hay fecha de SG, convertirla
+                                    if fecha_entrada and fecha_entrada.strip():
+                                        try:
+                                            fecha_conv = datetime.strptime(fecha_entrada, "%d/%m/%Y").date()
+                                            params.append(fecha_conv)
+                                        except:
+                                            params.append(None)
+                                    else:
+                                        params.append(None)
+                                    if grupo_vulnerable:
+                                        params.append(grupo_vulnerable)
+                                    else:
+                                        params.append(None)
+                                    if tipo_violencia:
+                                        params.append(tipo_violencia)
+                                    else:
+                                        params.append(None)
+                                    if ambito_violencia:
+                                        params.append(ambito_violencia)
+                                    else:
+                                        params.append(None)
+
                                     params.append(df['Expediente'].iloc[0])
                                     
                                     # Actualizar en la base de datos
                                     cursor.execute("""
                                         UPDATE Expediente 
-                                        SET Conclusión = ?, 
-                                            F_Conclusion = ?, 
-                                            Alias_Conclusión = ?
+                                        SET Conclusión = ?,  
+                                            Alias_Conclusión = ?,
+                                            F_Conclusion = ?,
+                                            F_EntradaSG = ?,
+                                            GrupoVulnerable = ?,
+                                            [Tipo De Violencia] = ?,
+                                            AmbitoModalidadViolencia = ?
                                         WHERE Expediente = ?
                                     """, params)
                                     
                                     conn.commit()
-                                    
                                     st.success("✅ Estatus actualizado exitosamente!")
                                     st.balloons()
-                                    st.rerun()
                                     
                                 except Exception as e:
                                     conn.rollback()
                                     st.error(f"❌ Error al actualizar: {str(e)}")
+
                 else:
                     st.warning("⚠️ No se encontró el expediente")
     
@@ -154,6 +201,7 @@ def render(conn, catalogos):
         # Generar reporte
         if st.button("📊 Generar Reporte", type="primary"):
             try:
+                cursor = conn.cursor() # este funciona junto con cursor.execute()
                 query = """
                 SELECT 
                     Conclusión,
@@ -162,33 +210,35 @@ def render(conn, catalogos):
                 WHERE 1=1
                 """
                 
-                params = []
-                
                 # Aplicar filtros de fecha
                 if fecha_desde and fecha_desde.strip():
                     fecha_desde_dt = datetime.strptime(fecha_desde, "%d/%m/%Y")
-                    query += " AND [Fecha de Inicio] >= ?"
-                    params.append(fecha_desde_dt)
+                    fecha_str = fecha_desde_dt.strftime("%d/%m/%Y")
+                    query += f" AND F_Conclusion >= #{fecha_str}#"
                 
                 if fecha_hasta and fecha_hasta.strip():
                     fecha_hasta_dt = datetime.strptime(fecha_hasta, "%d/%m/%Y")
-                    query += " AND [Fecha de Inicio] <= ?"
-                    params.append(fecha_hasta_dt)
+                    fecha_str = fecha_hasta_dt.strftime("%d/%m/%Y")
+                    query += f" AND F_Conclusion <= #{fecha_str}#"
                 
-                query += " GROUP BY Conclusión ORDER BY Cantidad DESC"
-                
-                df_reporte = pd.read_sql_query(query, conn, params=params)
+                query += " GROUP BY Conclusión ORDER BY COUNT(*) DESC"
+
+                #df_reporte = pd.read_sql_query(query, conn, params=params)
+                # Ejecutar query con cursor
+                cursor.execute(query)
+
+                columns = [column[0] for column in cursor.description]
+                results = cursor.fetchall()
+                df_reporte = pd.DataFrame.from_records(results, columns=columns)
                 
                 if not df_reporte.empty:
                     st.write("### Resumen por Estatus")
                     
                     # Mostrar métricas
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2 = st.columns(2)
                     with col1:
                         st.metric("Total Expedientes", df_reporte['Cantidad'].sum())
                     with col2:
-                        st.metric("Estatus Diferentes", len(df_reporte))
-                    with col3:
                         estatus_comun = df_reporte.iloc[0]['Conclusión'] if len(df_reporte) > 0 else "N/A"
                         st.metric("Estatus Más Común", estatus_comun)
                     
@@ -196,7 +246,8 @@ def render(conn, catalogos):
                     st.dataframe(df_reporte, use_container_width=True)
                     
                     # Gráfico
-                    st.bar_chart(df_reporte.set_index('Conclusión')['Cantidad'])
+                    fig = px.pie(df_reporte, values='Cantidad', names='Conclusión')
+                    st.plotly_chart(fig, use_container_width=True)
                     
                     # Botón para exportar
                     csv = df_reporte.to_csv(index=False).encode('utf-8')

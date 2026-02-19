@@ -4,7 +4,7 @@ from database import cargar_catalogos
 import pandas as pd
 
 def render(conn, catalogos):
-    st.header("➕ Registrar Nueva No Recomendación")
+    st.header("➕ Registrar Nueva Recomendación")
     st.markdown("---")
     # Formulario en pestañas para mejor organización
     tab1, tab2 = st.tabs(["📋 Información Básica", "🏛️ Autoridad Señalada"])
@@ -22,7 +22,7 @@ def render(conn, catalogos):
                 help="Formato: Número/Año-Sub"
             )
             
-            fecha_nr = st.date_input(
+            fecha_r = st.date_input(
                 "Fecha de Resolución *",
                 value=datetime.now().date(),
                 format="DD/MM/YYYY"
@@ -36,10 +36,16 @@ def render(conn, catalogos):
         
         with col2:
             numero = st.number_input(
-                "Número de No Recomendación *",
+                "Número de Recomendaciones *",
                 min_value=1,
                 step=1,
-                help="Número No Recomendaciones emitidas"
+                help="Número de Recomendaciones emitidas"
+            )
+            recom_text = st.text_area(
+                "Recomendación(es)",
+                placeholder="Redacte las recomendaciones",
+                height=150,
+                max_chars=2000
             )
             observaciones = st.text_area(
                 "Observaciones",
@@ -83,25 +89,19 @@ def render(conn, catalogos):
                 placeholder="Nombre(s) de la(s) persona(s) involucrada(s)"
             )
             autoridad = st.text_input(
-                "Autoridad Señalada *",
-                placeholder="Nombre de la autoridad específica",
+                "Dirigida a *",
+                placeholder="Nombre de la autoridad a la que se dirige la recomendación",
                 max_chars=255
-            )
-            municipio = st.selectbox(
-                "Municipio *",
-                options=catalogos['municipios'],
-                index=None,
-                placeholder="Autoridad de Municipio, Estatal o Federal"
             )
             dependencia = st.selectbox(
                 "Dependencia *",
-                options=catalogos['dependenciasNR'],
+                options=catalogos['autoridadR'],
                 index=None,
                 placeholder="Seleccione la dependencia"
             )
             hecho = st.selectbox(
                 "Hecho Denunciado *",
-                options=catalogos['hechosNR'],
+                options=catalogos['hechosR'],
                 index=None,
                 placeholder="Seleccione tipo de hecho"
             )
@@ -109,12 +109,11 @@ def render(conn, catalogos):
         with col_add2:
             if st.button("➕ Agregar Autoridad", use_container_width=True):
                 # Validar campos obligatorios
-                if all([autoridad, municipio, dependencia, hecho]):
+                if all([autoridad, dependencia, hecho]):
                     
                     nueva_entrada = {
                         'quejoso': quejoso,
                         'autoridad': autoridad,
-                        'municipio': municipio,
                         'dependencia': dependencia,
                         'hecho': hecho
                     }
@@ -131,14 +130,13 @@ def render(conn, catalogos):
     # Mostrar resumen de campos obligatorios
     campos_obligatorios = {
         "Expediente": expediente,
-        "Fecha de Resolución": fecha_nr,
+        "Fecha de Resolución": fecha_r,
         "Subprocuraduría": subprocu,
         "Quejoso": quejoso,
         "Autoridad": autoridad,
         "Hecho": hecho,
-        "NumNR": numero,
-        "Dependencia": dependencia,
-        "municipio": municipio
+        "NumR": numero,
+        "Dependencia": dependencia
     }
     
     faltantes = [campo for campo, valor in campos_obligatorios.items() if not valor]
@@ -147,14 +145,14 @@ def render(conn, catalogos):
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
-        if st.button("📝 Guardar Queja", type="primary", use_container_width=True, key="btn_guardar_completo"):
+        if st.button("📝 Guardar Recomendación", type="primary", use_container_width=True, key="btn_guardar_completo"):
             if not faltantes:
                 with st.spinner("Guardando en todas las tablas..."):
                     try:
                         # 1. Insertar en tabla NoRecomendaciones
                         datos_basicos = (
                             expediente,
-                            fecha_nr,
+                            fecha_r,
                             subprocu,
                             observaciones if observaciones else None,
                             numero,
@@ -162,13 +160,12 @@ def render(conn, catalogos):
                         )
                         datos = (
                             expediente,
-                            fecha_nr,
+                            fecha_r,
                             quejoso,
                             autoridad,
                             hecho,
                             numero,
                             dependencia if dependencia else None,
-                            municipio if municipio else None,
                             subprocu,
                             observaciones if observaciones else None,
                         )
@@ -176,29 +173,25 @@ def render(conn, catalogos):
                         if st.session_state.autoridades_lista:
                             for auth in st.session_state.autoridades_lista:
                                 cursor.execute("""
-                                    INSERT INTO ImportarNoRecomendaciones 
-                                    (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
-                                    Dependencia, Municipio, SubProcu, Observaciones)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    INSERT INTO ImportarRecomendaciones 
+                                    (Expediente, FechaRecom, Quejoso, Autoridad, [Dirigida a], Causa,
+                                    Respuesta,NumRecom, DSP,
+                                    Recomendacion, SubProcu, Observaciones)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
                                 """, (
                                     expediente,
-                                    fecha_nr,
-                                    quejoso,
+                                    fecha_r,
+                                    auth['quejoso'],
+                                    auth['dependencia'],
                                     auth['autoridad'],
                                     auth['hecho'],
+                                    'Sin Cumplimiento',
                                     numero,
-                                    auth['dependencia'] if auth['dependencia'] else None,
-                                    auth['municipio'] if auth['municipio'] else None,
+                                    0,
+                                    recom_text,
                                     subprocu,
                                     observaciones if observaciones else None
                                 ))
-                        else:
-                            cursor.execute("""
-                                    INSERT INTO ImportarNoRecomendaciones 
-                                    (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
-                                    Dependencia, Municipio, SubProcu, Observaciones)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (datos))
                         
                         conn.commit()
                         

@@ -2,7 +2,7 @@
 import streamlit as st
 from database import get_connection, cargar_catalogos, get_connection_mysql, get_connection_access
 from components.sidebar import render_sidebar
-from functions import home, buscar, nueva_queja, ver_todos, status, nueva_NR
+from functions import home, buscar, nueva_queja, ver_todos, status, nueva_NR, editar, nueva_R
 import subprocess
 import time
 
@@ -58,19 +58,25 @@ def main():
     # Enrutamiento de páginas
     if opcion_seleccionada == "🏠 Inicio":
         home.render()
-    elif opcion_seleccionada == "🔍 Buscar Expediente":
+    elif opcion_seleccionada == "🔍 Buscar":
         buscar.render(conn, catalogos)
     elif opcion_seleccionada == "➕ Nueva Queja":
-        nueva_queja.render(conn, catalogos)
+        if st.session_state.get('modo_edicion') and st.session_state.get('expediente_editar'):
+            editar.render(conn, catalogos, modo_edicion=True, expediente_editar=st.session_state.expediente_editar)
+        else:
+            editar.render(conn, catalogos, modo_edicion=False)
     elif opcion_seleccionada == "➕ Nueva Recomendación":
-        st.markdown("En construcción...")
+        nueva_R.render(conn, catalogos)
     elif opcion_seleccionada == "➕ Nueva No Recomendación":
         nueva_NR.render(conn, catalogos)
-    elif opcion_seleccionada == "🔄 Editar Expediente":
-        st.markdown("En construcción...")
+    #elif opcion_seleccionada == "🔄 Editar Expediente":
+    #    if st.session_state.get('modo_edicion') and st.session_state.get('expediente_editar'):
+    #        editar.render(conn, catalogos, modo_edicion=True, expediente_editar=st.session_state.expediente_editar)
+    #    else:
+    #        editar.render(conn, catalogos)
     elif opcion_seleccionada == "🔄 Modificar Estatus":
         status.render(conn, catalogos)
-    elif opcion_seleccionada == "📊 Ver Todos":
+    elif opcion_seleccionada == "📊 Reportes":
         ver_todos.render(conn, catalogos)
     
     # Footer

@@ -7,33 +7,6 @@ import os
 from datetime import datetime
 import webbrowser
 
-def verificar_dependencias():
-    """Verifica que todo esté instalado"""
-    print("🔍 Verificando dependencias...")
-    
-    # Verificar Python
-    try:
-        import streamlit
-        print(f"✅ Streamlit {streamlit.__version__}")
-    except ImportError:
-        print("❌ Streamlit no instalado. Instalando...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "streamlit"])
-    
-    try:
-        import pandas
-        print(f"✅ Pandas {pandas.__version__}")
-    except ImportError:
-        print("❌ Pandas no instalado. Instalando...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pandas"])
-    
-    # Verificar pyodbc si usas SQL Server
-    try:
-        import pyodbc
-        print("✅ pyodbc instalado")
-    except ImportError:
-        print("❌ pyodbc no instalado. Instalando...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "pyodbc"])
-
 def iniciar_ngrok(port=8501):
     """Inicia ngrok y retorna el proceso y la URL"""
     print("🚀 Iniciando ngrok...")
@@ -102,9 +75,6 @@ def main():
     print("       🖥️ SIPRODHEG 2.0 - SERVIDOR PÚBLICO")
     print(f"{'='*60}")
     
-    # Verificar dependencias
-    verificar_dependencias()
-    
     # Iniciar ngrok
     ngrok_proceso, url_publica = iniciar_ngrok(8501)
     
@@ -130,7 +100,7 @@ def main():
             "--server.port=8501",
             "--server.headless=false",
             "--browser.serverAddress=localhost",
-            "--theme.base=light"
+            "--theme.base=dark"
         ])
     except KeyboardInterrupt:
         print("\n🛑 Deteniendo aplicación...")
