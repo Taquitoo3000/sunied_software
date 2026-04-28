@@ -2,7 +2,7 @@ import joblib
 import pandas as pd
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.parent  # sube a la raíz del proyecto
+BASE_DIR = Path(__file__).parent.parent.parent  # sube a la raíz del proyecto
 MODELS_DIR = BASE_DIR / "components" / "models"
 
 rf              = joblib.load(MODELS_DIR / "modelo_recomendaciones.pkl")
