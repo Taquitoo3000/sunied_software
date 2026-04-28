@@ -1,22 +1,7 @@
-import pyodbc
 import streamlit as st
 from datetime import datetime
 import pandas as pd
 from sqlalchemy import create_engine, text
-
-@st.cache_resource
-def get_connection():
-    try:
-        conn = pyodbc.connect(
-            'DRIVER={ODBC Driver 17 for SQL Server};'
-            f'SERVER=localhost\\SQLEXPRESS;'
-            f'DATABASE=PRODHEG;'
-            'Trusted_Connection=yes;'
-        )
-        return conn
-    except Exception as e:
-        st.error(f"Error: {str(e)[:100]}")  # Mostrar solo parte del error
-        return None
     
 @st.cache_resource
 def get_connection_mysql():

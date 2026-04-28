@@ -8,7 +8,6 @@ import plotly.express as px
 from docx import Document
 import subprocess
 from pathlib import Path
-from database import get_connection
 from functions.reporte import predecir_rec
 from functions.reporte.generar_reporte_pred import oraculo_reporte
 from sqlalchemy import text
@@ -319,8 +318,8 @@ def render(conn, catalogos):
         if st.button("Ejecutar Query", use_container_width=True, key="btn_personalizado", type="primary"):
             try:
                 with st.spinner("Cargando datos..."):
-                    conn2=get_connection()
-                    df_reporte = busqueda_personalizada(conn2,archivo_seleccionado)
+                    #conn2=get_connection()
+                    #df_reporte = busqueda_personalizada(conn2,archivo_seleccionado)
                     st.session_state["df_reporte"] = df_reporte
                     #df_reporte = pd.DataFrame.from_records(df_reporte, columns=columns)
                     if "df_reporte" in st.session_state:
