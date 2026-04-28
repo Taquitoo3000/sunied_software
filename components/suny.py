@@ -20,7 +20,7 @@ system_prompt="""
 
 def chat_asistente():
     st.write("### Hola, soy Suny")
-    client = genai.Client(api_key="AIzaSyDZI_7Tt_luaQUgJmv2ijU5-s7BTuEENB4")
+    client = genai.Client(api_key=st.secrets["API_KEY"])
     #model = genai.GenerativeModel(
     #    model_name='gemini-2.5-flash',
     #    system_instruction=system_prompt
