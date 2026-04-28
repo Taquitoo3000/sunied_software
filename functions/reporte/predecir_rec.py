@@ -1,15 +1,14 @@
 import joblib
 import pandas as pd
+from pathlib import Path
 
-RUTA_MODELO = r"C:\Users\PRODHEG\Desktop\isael\proyectos\machine_learning\prediccion_recom\modelo_recomendaciones.pkl"
-RUTA_SCALER = r"C:\Users\PRODHEG\Desktop\isael\proyectos\machine_learning\prediccion_recom\scaler_recomendaciones.pkl"
-RUTA_PROMEDIOS = r"C:\Users\PRODHEG\Desktop\isael\proyectos\machine_learning\prediccion_recom\target_encoding_promedios.pkl"
-RUTA_COLUMNAS = r"C:\Users\PRODHEG\Desktop\isael\proyectos\machine_learning\prediccion_recom\columnas_modelo.pkl"
-# Cargar modelo al iniciar
-rf = joblib.load(RUTA_MODELO)
-scaler = joblib.load(RUTA_SCALER)
-promedios = joblib.load(RUTA_PROMEDIOS)
-columnas_modelo = joblib.load(RUTA_COLUMNAS)
+BASE_DIR = Path(__file__).parent.parent  # sube a la raíz del proyecto
+MODELS_DIR = BASE_DIR / "components" / "models"
+
+rf              = joblib.load(MODELS_DIR / "modelo_recomendaciones.pkl")
+scaler          = joblib.load(MODELS_DIR / "scaler_recomendaciones.pkl")
+promedios       = joblib.load(MODELS_DIR / "target_encoding_promedios.pkl")
+columnas_modelo = joblib.load(MODELS_DIR / "columnas_modelo.pkl")
 
 def get_expediente(numero: str,conn):
     df_exp = pd.read_sql("SELECT * FROM Expediente WHERE Expediente like %s", conn, params=('%' + numero + '%',))

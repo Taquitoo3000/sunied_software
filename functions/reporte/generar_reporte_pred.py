@@ -1,14 +1,15 @@
 import joblib
 import pandas as pd
-import pyodbc
+from pathlib import Path
 from datetime import datetime
 
 # ─── CONFIGURACIÓN ───────────────────────────────────────────────────────────
-RUTA=r"C:\Users\PRODHEG\Desktop\isael\proyectos\machine_learning\prediccion_recom"
-RUTA_MODELO = rf"{RUTA}\modelo_recomendaciones.pkl"
-RUTA_SCALER = rf"{RUTA}\scaler_recomendaciones.pkl"
-RUTA_PROMEDIOS = rf"{RUTA}\target_encoding_promedios.pkl"
-RUTA_COLUMNAS = rf"{RUTA}\columnas_modelo.pkl"
+BASE_DIR = Path(__file__).parent.parent.parent
+RUTA = BASE_DIR / "components" / "models"
+RUTA_MODELO = RUTA / "modelo_recomendaciones.pkl"
+RUTA_SCALER = RUTA / "scaler_recomendaciones.pkl"
+RUTA_PROMEDIOS = RUTA / "target_encoding_promedios.pkl"
+RUTA_COLUMNAS = RUTA / "columnas_modelo.pkl"
 def oraculo_reporte(conn):
     # ─── 2. CARGAR DATOS NUEVOS ───────────────────────────────────────────────────
     df_exp = pd.read_sql("SELECT * FROM Expediente WHERE F_Conclusion IS NULL", conn)
