@@ -2,8 +2,9 @@ import streamlit as st
 from datetime import datetime
 from database import cargar_catalogos
 import pandas as pd
+from sqlalchemy import text
 
-def render(conn, catalogos):
+def render(engine, catalogos):
     st.header("➕ Registrar Nueva Recomendación")
     st.markdown("---")
     # Formulario en pestañas para mejor organización
@@ -145,67 +146,44 @@ def render(conn, catalogos):
     col_btn1, col_btn2 = st.columns(2)
     
     with col_btn1:
-        if st.button("📝 Guardar Recomendación", type="primary", use_container_width=True, key="btn_guardar_completo"):
+        if st.button("📝 Guardar Recomendación", type="primary", width='stretch', key="btn_guardar_completo"):
             if not faltantes:
                 with st.spinner("Guardando en todas las tablas..."):
                     try:
-                        # 1. Insertar en tabla NoRecomendaciones
-                        datos_basicos = (
-                            expediente,
-                            fecha_r,
-                            subprocu,
-                            observaciones if observaciones else None,
-                            numero,
-                            quejoso
-                        )
-                        datos = (
-                            expediente,
-                            fecha_r,
-                            quejoso,
-                            autoridad,
-                            hecho,
-                            numero,
-                            dependencia if dependencia else None,
-                            subprocu,
-                            observaciones if observaciones else None,
-                        )
-                        cursor = conn.cursor()
-                        if st.session_state.autoridades_lista:
-                            for auth in st.session_state.autoridades_lista:
-                                cursor.execute("""
-                                    INSERT INTO ImportarRecomendaciones 
-                                    (Expediente, FechaRecom, Quejoso, Autoridad, [Dirigida a], Causa,
-                                    Respuesta,NumRecom, DSP,
-                                    Recomendacion, SubProcu, Observaciones)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
-                                """, (
-                                    expediente,
-                                    fecha_r,
-                                    auth['quejoso'],
-                                    auth['dependencia'],
-                                    auth['autoridad'],
-                                    auth['hecho'],
-                                    'Sin Cumplimiento',
-                                    numero,
-                                    0,
-                                    recom_text,
-                                    subprocu,
-                                    observaciones if observaciones else None
-                                ))
-                        
-                        conn.commit()
-                        
-                        st.success("✅ Resolución guardada exitosamente!")
-                        st.balloons()
-                        # Limpiar cache de catálogos
-                        cargar_catalogos.clear()
-                        # Limpiar estado
-                        st.session_state.expediente_editar = ""
-                        st.balloons()
-                        # Opción: limpiar formulario o redirigir
-                        #rerun()
+                        with engine.begin() as conn:
+                            # 1. Insertar en tabla NoRecomendaciones
+                            if st.session_state.autoridades_lista:
+                                for auth in st.session_state.autoridades_lista:
+                                    conn.execute(text("""
+                                        INSERT INTO ImportarRecomendaciones 
+                                        (Expediente, FechaRecom, Quejoso, Autoridad, `Dirigida a`, Causa,
+                                        Respuesta,NumRecom, DSP,
+                                        Recomendacion, SubProcu, Observaciones)
+                                        VALUES (:expediente, :fecha_r, :quejoso, :dependencia, :autoridad, :hecho, 'Sin Cumplimiento', :numero, :dsp , :recom_text, :subprocu, :observaciones)
+                                    """), {
+                                        'expediente': expediente,
+                                        'fecha_r': fecha_r,
+                                        'quejoso': auth['quejoso'],
+                                        'dependencia': auth['dependencia'],
+                                        'autoridad': auth['autoridad'],
+                                        'hecho': auth['hecho'],
+                                        'numero': numero,
+                                        'dsp': 0,
+                                        'recom_text': recom_text,
+                                        'subprocu': subprocu,
+                                        'observaciones': observaciones if observaciones else None
+                                    })
+                            
+                            st.success("✅ Resolución guardada exitosamente!")
+                            st.balloons()
+                            # Limpiar cache de catálogos
+                            cargar_catalogos.clear()
+                            # Limpiar estado
+                            st.session_state.expediente_editar = ""
+                            st.balloons()
+                            # Opción: limpiar formulario o redirigir
+                            #rerun()
                     except Exception as e:
-                        conn.rollback()
                         st.error(f"❌ Error al guardar: {str(e)[:200]}")
             else:
                 st.error("Complete todos los campos obligatorios (*)")

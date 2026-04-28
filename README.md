@@ -40,20 +40,24 @@ Sistema web para la gestión de expedientes de quejas con interfaz moderna y fun
 ---
 
 ## Estructura del Proyecto
-app_quejas/\
+sunied/\
 ├── main.py\
 ├── database.py\
-├── models.py\
 ├── queries.py\
 ├── components/\
+│   ├── suny.py\
 │   └── sidebar.py\
-├── pages/\
+├── functions/\
 │   ├── home.py\
 │   ├── buscar.py\
-│   ├── nueva_queja.py\
-│   └── ver_todos.py\
+│   ├── editar.py\
+│   ├── nueva_R.py\
+│   ├── nueva_NR.py\
+│   ├── editar.py\
+│   └── reports.py\
 ├── img/\
 │   ├── logo_horizontal.png\
+│   ├── loguito.ico\
 │   └── loguito.png\
 └── style.css\
 ## Requisitos Previos
@@ -66,7 +70,7 @@ python --version
 Pasos para empezar a usar
 ```bash
 pip install -r requirements.txt
-git clone https://github.com/Taquitoo3000/captura_form.git
+git clone https://github.com/Taquitoo3000/sunied.git
 ```
 Editar `.streamlit/secrets.toml` con tus credenciales\
 La apliacion se ejecuta con:

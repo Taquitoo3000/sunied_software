@@ -2,8 +2,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from queries import buscar_expedientes
 import plotly.express as px
+from sqlalchemy import text
 
 def render(conn, catalogos):
     st.header("🔄 Modificar Estatus de Expediente")
@@ -38,15 +38,15 @@ def render(conn, catalogos):
                     q.F_Conclusion,
                     q.F_EntradaSG,
                     q.GrupoVulnerable,
-                    q.[Organismo emisor],
-                    q.[Tipo De Violencia],
-                    q.AmbitoModalidadViolencia,
+                    q.`Organismo emisor`,
+                    q.`Tipo De Violencia`,
+                    q.`AmbitoModalidadViolencia`,
                     q.Notas,
                     q.Notificado
                 FROM Expediente q
-                WHERE q.Expediente LIKE ?
+                WHERE q.Expediente LIKE %(exp)s
                 """
-                df = pd.read_sql_query(query, conn, params=[f"%{expediente_buscar}%"])
+                df = pd.read_sql_query(query, conn, params={'exp': f"%{expediente_buscar}%"})
                 
                 if not df.empty:
                     st.success(f"✅ Expediente encontrado: {df['Expediente'].iloc[0]}")
@@ -138,68 +138,60 @@ def render(conn, catalogos):
                                 st.error("Debe actualizar un estatus")
                             else:
                                 try:
-                                    cursor = conn.cursor()
                                     
                                     # Preparar datos
-                                    params = [nuevo_estatus,desglose]
+                                    params = {
+                                        "estatus": nuevo_estatus,
+                                        "desglose": desglose,
+                                        "fecha_conclusion": None,
+                                        "fecha_entrada": None,
+                                        "grupo_vulnerable": grupo_vulnerable if grupo_vulnerable else None,
+                                        "organismo_emisor": organismo_emisor if organismo_emisor else None,
+                                        "tipo_violencia": tipo_violencia if tipo_violencia else None,
+                                        "ambito_violencia": ambito_violencia if ambito_violencia else None,
+                                        "expediente": df['Expediente'].iloc[0]
+                                    }
                                     
                                     # Si hay fecha de conclusión, convertirla
                                     if fecha_conclusion:
                                         try:
-                                            fecha_conv = datetime.strptime(fecha_conclusion, "%d/%m/%Y").date()
-                                            params.append(fecha_conv)
+                                            #fecha_conclusion = datetime.strptime(fecha_conclusion, "%d/%m/%Y").date()
+                                            #params.append(fecha_conv)
+                                            params['fecha_conclusion'] = fecha_conclusion
                                         except:
-                                            params.append(None)
+                                            params['fecha_conclusion'] = None
                                     else:
-                                        params.append(None)
+                                        params['fecha_conclusion'] = None
                                     # Si hay fecha de SG, convertirla
                                     if fecha_entrada:
                                         try:
-                                            fecha_conv = datetime.strptime(fecha_entrada, "%d/%m/%Y").date()
-                                            params.append(fecha_conv)
+                                            #fecha_entrada = datetime.strptime(fecha_entrada, "%d/%m/%Y").date()
+                                            #params.append(fecha_conv)
+                                            params['fecha_entrada'] = fecha_entrada
                                         except:
-                                            params.append(None)
+                                            params['fecha_entrada'] = None
                                     else:
-                                        params.append(None)
-                                    if grupo_vulnerable:
-                                        params.append(grupo_vulnerable)
-                                    else:
-                                        params.append(None)
-                                    if organismo_emisor:
-                                        params.append(organismo_emisor)
-                                    else:
-                                        params.append(None)
-                                    if tipo_violencia:
-                                        params.append(tipo_violencia)
-                                    else:
-                                        params.append(None)
-                                    if ambito_violencia:
-                                        params.append(ambito_violencia)
-                                    else:
-                                        params.append(None)
-
-                                    params.append(df['Expediente'].iloc[0])
+                                        params['fecha_entrada'] = None
                                     
                                     # Actualizar en la base de datos
-                                    cursor.execute("""
-                                        UPDATE Expediente 
-                                        SET Conclusión = ?,  
-                                            Alias_Conclusión = ?,
-                                            F_Conclusion = ?,
-                                            F_EntradaSG = ?,
-                                            GrupoVulnerable = ?,
-                                            [Organismo emisor] = ?,
-                                            [Tipo De Violencia] = ?,
-                                            AmbitoModalidadViolencia = ?
-                                        WHERE Expediente = ?
-                                    """, params)
-                                    
-                                    conn.commit()
+                                    with conn.begin() as conn2:
+                                        conn2.execute(text("""
+                                            UPDATE Expediente 
+                                            SET Conclusión = :estatus,  
+                                                Alias_Conclusión = :desglose,
+                                                F_Conclusion = :fecha_conclusion,
+                                                F_EntradaSG = :fecha_entrada,
+                                                GrupoVulnerable = :grupo_vulnerable,
+                                                `Organismo emisor` = :organismo_emisor,
+                                                `Tipo De Violencia` = :tipo_violencia,
+                                                `AmbitoModalidadViolencia` = :ambito_violencia
+                                            WHERE Expediente = :expediente
+                                        """), params)
+
                                     st.success("✅ Estatus actualizado exitosamente!")
                                     st.balloons()
                                     
                                 except Exception as e:
-                                    conn.rollback()
                                     st.error(f"❌ Error al actualizar: {str(e)}")
 
                 else:
@@ -221,36 +213,33 @@ def render(conn, catalogos):
         # Generar reporte
         if st.button("📊 Generar Reporte", type="primary"):
             try:
-                cursor = conn.cursor() # este funciona junto con cursor.execute()
+                
+                # Aplicar filtros de fecha
+                if fecha_desde and fecha_desde.strip():
+                    fecha_desde_dt = datetime.strptime(fecha_desde, "%d/%m/%Y")
+                
+                if fecha_hasta and fecha_hasta.strip():
+                    fecha_hasta_dt = datetime.strptime(fecha_hasta, "%d/%m/%Y")
+
                 query = """
                 SELECT 
                     Conclusión,
                     COUNT(*) as Cantidad
                 FROM Expediente
                 WHERE 1=1
+                    AND F_Conclusion >= :fecha_desde_dt
+                    AND F_Conclusion <= :fecha_hasta_dt
+                GROUP BY Conclusión
+                ORDER BY COUNT(*) DESC
                 """
-                
-                # Aplicar filtros de fecha
-                if fecha_desde and fecha_desde.strip():
-                    fecha_desde_dt = datetime.strptime(fecha_desde, "%d/%m/%Y")
-                    fecha_str = fecha_desde_dt.strftime("%d/%m/%Y")
-                    query += f" AND F_Conclusion >= #{fecha_str}#"
-                
-                if fecha_hasta and fecha_hasta.strip():
-                    fecha_hasta_dt = datetime.strptime(fecha_hasta, "%d/%m/%Y")
-                    fecha_str = fecha_hasta_dt.strftime("%d/%m/%Y")
-                    query += f" AND F_Conclusion <= #{fecha_str}#"
-                
-                query += " GROUP BY Conclusión ORDER BY COUNT(*) DESC"
 
                 #df_reporte = pd.read_sql_query(query, conn, params=params)
                 # Ejecutar query con cursor
-                cursor.execute(query)
+                df_reporte = pd.read_sql_query(text(query), conn, params={
+                    'fecha_desde_dt': fecha_desde_dt,
+                    'fecha_hasta_dt': fecha_hasta_dt
+                })
 
-                columns = [column[0] for column in cursor.description]
-                results = cursor.fetchall()
-                df_reporte = pd.DataFrame.from_records(results, columns=columns)
-                
                 if not df_reporte.empty:
                     st.write("### Resumen por Estatus")
                     

@@ -11,8 +11,8 @@ from pathlib import Path
 os.chdir(Path(__file__).parent)
 
 año = 2026
-auth_incon = 41
-hecho_incon = 114
+auth_incon = "X"
+hecho_incon = "X"
 plantilla = "semanal_plantilla.docx"
 MESES_ROMANOS = {
     1: "I", 2: "II", 3: "III", 4: "IV", 5: "V", 6: "VI",
@@ -28,12 +28,17 @@ conn_str = (
     r'DBQ=' + archivo_access + ';'
 )
 conn = pyodbc.connect(conn_str)
-quejas = pd.read_sql("SELECT * FROM [Quejas]", conn)
-expediente = pd.read_sql("SELECT * FROM [Expediente]", conn)
-recomendaciones = pd.read_sql("SELECT * FROM [Recomendaciones]", conn)
-norecomendaciones = pd.read_sql("SELECT * FROM [NoRecomendaciones]", conn)
+
+quejas = pd.read_sql("SELECT * FROM Quejas", conn)
+expediente = pd.read_sql("SELECT * FROM Expediente", conn)
+recomendaciones = pd.read_sql("SELECT * FROM Recomendaciones", conn)
+norecomendaciones = pd.read_sql("SELECT * FROM NoRecomendaciones", conn)
 conn.close()
 print("LOADED ACCESS")
+quejas['DireccionMunicipal'] = quejas['DireccionMunicipal'].str.upper()
+quejas['Municipio'] = quejas['Municipio'].str.upper()
+recomendaciones['Causa'] = recomendaciones['Causa'].str.upper()
+recomendaciones['Autoridad'] = recomendaciones['Autoridad'].str.upper()
 
 # Merge Quejas and Expediente
 df = pd.merge(
@@ -45,8 +50,8 @@ df = pd.merge(
 )
 df = df[df['Expediente'].str.contains(f'/{año}', na=False)]
 df['DireccionMunicipal'] = df['DireccionMunicipal'].str.replace(
-    'Dirección de Tránsito Municipal', 
-    'Dependencia Municipal de Seguridad Pública', 
+    'DIRECCIÓN DE TRÁNSITO MUNICIPAL', 
+    'DEPENDENCIA MUNICIPAL DE SEGURIDAD PÚBLICA', 
     case=False, 
     regex=True
 )
@@ -118,6 +123,16 @@ tabla_autoridades = [
     for _, row in autoridades_df.iterrows()
 ]
 
+# Autoridades inconsistentes
+auth_incon_df = pd.read_excel(r'C:\Users\PRODHEG\Desktop\isael\General_2026.xlsx')
+auth_incon = auth_incon_df[
+        auth_incon_df['Autoridad'].str.contains('null',na=False,case=False)
+        | auth_incon_df['Autoridad'].str.contains('no proporc',na=False,case=False)
+        | auth_incon_df['Autoridad'].isnull()
+    ].shape[0]
+hecho_incon = auth_incon_df[auth_incon_df['Hecho'].str.contains('null',na=False,case=False)
+                          | auth_incon_df['Hecho'].isnull()].shape[0]
+
 # Municipios con más señalamientos
 municipio = df.groupby(['Expediente', 'DireccionMunicipal', 'Municipio'])['Dependencia'].count().reset_index(name='CuentaDeDependencia')
 municipio = municipio[~municipio['Municipio'].str.startswith('indet', na=False)]
@@ -125,7 +140,7 @@ municipio = municipio.dropna(subset=['Municipio'])
 municipio = municipio.sort_values('CuentaDeDependencia', ascending=False)
 municipio = municipio['Municipio'].value_counts().reset_index()
 municipio.columns = ['Municipio', 'CuentaDeMunicipio']
-exclusion = ['Estatal', 'Federal', 'Indeterminado']
+exclusion = ['ESTATAL', 'FEDERAL', 'INDETERMINADO', 'NULL']
 municipio = municipio[
     (~municipio['Municipio'].isin(exclusion)) &
     (~municipio['Municipio'].str.startswith('autoridad', na=False))
@@ -140,8 +155,8 @@ conteo = df[['Expediente', 'DireccionMunicipal', 'Municipio']].drop_duplicates()
 conteo = conteo[conteo['Municipio'].str.lower() != 'indeterminado']
 conteo = conteo.dropna(subset=['Municipio'])
 conteo = conteo[
-    (conteo[col_municipio] != 'Estatal') & 
-    (conteo[col_municipio] != 'Federal') & 
+    (conteo[col_municipio].str.lower() != 'estatal') & 
+    (conteo[col_municipio].str.lower() != 'federal') & 
     ~conteo[col_municipio].str.startswith('autoridad', na=False) &
     ~conteo[col_municipio].str.startswith('Indet', na=False) &
     ~conteo[col_municipio].str.startswith('null', na=False) &
@@ -158,7 +173,7 @@ tabla_autoridades_municipales = [
 conteo = df[['Expediente', 'DireccionMunicipal', 'Municipio']].drop_duplicates()
 conteo = conteo[conteo['Municipio'].str.lower() != 'indeterminado']
 conteo = conteo.dropna(subset=['Municipio'])
-conteo = conteo[conteo['Municipio'] == 'Federal']
+conteo = conteo[conteo['Municipio'].str.lower() == 'federal']
 conteo = conteo['DireccionMunicipal'].value_counts().head(8).reset_index()
 conteo.columns = ['nombre', 'conteo']
 tabla_autoridades_federales = [
@@ -168,7 +183,8 @@ tabla_autoridades_federales = [
 
 # Hechos en Quejas
 conteo = df[['Expediente','Hecho']].sort_values('Expediente').drop_duplicates()
-conteo = conteo['Hecho'].str.lower().value_counts().head(8).reset_index()
+conteo = conteo[conteo['Hecho'].str.lower() != "indeterminado"]
+conteo = conteo['Hecho'].str.upper().value_counts().head(8).reset_index()
 conteo.columns = ['nombre', 'conteo']
 tabla_hechos = [
     {"nombre": str(row['nombre']), "conteo": str(row['conteo'])}
@@ -177,7 +193,7 @@ tabla_hechos = [
 
 # Conclusiones
 df_filtrado = expediente.copy()
-filtro_indeterminado = df_filtrado['Conclusión'] != "INDETERMINADO"
+filtro_indeterminado = df_filtrado['Conclusión'].str.lower() != "indeterminado"
 filtro_no_nulos = df_filtrado['Conclusión'].notna()
 fecha_inicio = pd.to_datetime(f'{año-1}-12-31')
 filtro_fechas = (df_filtrado['F_Conclusion'] > fecha_inicio)
@@ -191,6 +207,7 @@ mapeo_categorias = {
     'No admisión por falta de materia': 'No Admisión',
     'No admisión por falta de materia (desinterés)': 'No Admisión',
     'No admisión por tratarse de asunto entre particulares': 'No Admisión',
+    'No admisión por extemporaneidad y falta de materia': 'No Admisión',
 
     # Incompetencia
     'No admisión por incompetencia': 'Incompetencia',
@@ -225,7 +242,7 @@ df_filtrado = df_filtrado[filtro_indeterminado & filtro_no_nulos & filtro_fechas
 conclusiones = df_filtrado['Alias_Conclusión'].replace(mapeo_categorias).value_counts().reset_index()
 conclusiones.columns = ['nombre', 'conteo']
 tabla_salidas = [
-    {"nombre": str(row['nombre']), "conteo": str(row['conteo'])}
+    {"nombre": str(row['nombre']).upper(), "conteo": str(row['conteo'])}
     for _, row in conclusiones.iterrows()
 ]
 
@@ -234,7 +251,7 @@ recomendaciones['FechaRecom'] = pd.to_datetime(recomendaciones['FechaRecom'], er
 recom = recomendaciones[recomendaciones['FechaRecom'].dt.year == año]
 recom = recom[~recom['Observaciones'].str.contains('acumula', case=False, na=False)]
 recom2 = recom[['Expediente', 'FechaRecom']].drop_duplicates()
-total_recom = int(recom.shape[0])
+total_recom = int(recom2.shape[0])
 norecomendaciones['Fecha_NR'] = pd.to_datetime(norecomendaciones['Fecha_NR'], errors='coerce')
 norec = norecomendaciones[norecomendaciones['Fecha_NR'].dt.year == año]
 norec = norec[~norec['Observaciones'].str.contains('acumula', case=False, na=False)]
@@ -305,16 +322,36 @@ resultado = (
 )
 resultado.head(7).reset_index()
 tabla_recom_hechos = [
-    {"nombre": str(row['Causa Corregida']), "conteo": str(row['CuentaDeHecho'])}
+    {"nombre": str(row['Causa Corregida']).upper(), "conteo": str(row['CuentaDeHecho'])}
     for _, row in resultado.head(7).iterrows()
+]
+
+# Autoridades Federales de Seguridad
+conteo = df[['Expediente', 'DireccionMunicipal', 'Municipio', 'Dependencia']].drop_duplicates()
+conteo = conteo[conteo['Municipio'].str.lower() != 'indeterminado']
+conteo = conteo.dropna(subset=['Municipio'])
+conteo = conteo[conteo['Municipio'].str.lower() == 'federal']
+conteo = conteo[conteo['Dependencia'].str.contains('ssp',na=False, case=False)
+                | conteo['Dependencia'].str.contains('fisca',na=False, case=False)
+                | conteo['Dependencia'].str.contains('guardia nac',na=False, case=False)
+                | conteo['Dependencia'].str.contains('marina',na=False, case=False)
+                | conteo['Dependencia'].str.contains('sedena',na=False, case=False)]
+conteo = conteo['DireccionMunicipal'].value_counts().reset_index().head(6)
+conteo.columns = ['nombre', 'conteo']
+tabla_autoridades_federales_seguridad = [
+    {"nombre": str(row['nombre']), "conteo": str(row['conteo'])}
+    for _, row in conteo.iterrows()
 ]
 
 # Autoridades Estatales
 conteo = df[['Expediente', 'DireccionMunicipal', 'Municipio']].drop_duplicates()
 conteo = conteo[conteo['Municipio'].str.lower() != 'indeterminado']
 conteo = conteo.dropna(subset=['Municipio'])
-conteo = conteo[conteo['Municipio'] == 'Estatal']
-conteo = conteo[conteo['DireccionMunicipal'].str.contains('- per',na=False, case=False)]
+conteo = conteo[conteo['Municipio'].str.lower() == 'estatal']
+conteo = conteo[conteo['DireccionMunicipal'].str.contains('s - per',na=False, case=False)
+                | conteo['DireccionMunicipal'].str.contains('c - per',na=False, case=False)
+                | conteo['DireccionMunicipal'].str.contains('p - per',na=False, case=False)
+                | conteo['DireccionMunicipal'].str.contains('f - per',na=False, case=False)]
 conteo = conteo['DireccionMunicipal'].value_counts().reset_index().head(6)
 conteo.columns = ['nombre', 'conteo']
 tabla_autoridades_estatales = [
@@ -335,13 +372,14 @@ tabla_municipios_dsp = [
 ]
 
 # Oficiosas
-conteo = df[df['Recepcion'].str.contains('Oficiosa', case=False, na=False)][['Expediente', 'FechaInicio', 'DireccionMunicipal', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
-conteo = conteo[['Expediente', 'FechaInicio', 'DireccionMunicipal', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
-conteo.columns = ['Expediente', 'FechaInicio','DireccionMunicipal','F_Conclusion']
+conteo = df[df['Recepcion'].str.contains('Oficiosa', case=False, na=False)][['Expediente', 'FechaInicio', 'DireccionMunicipal','Hecho','F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
+conteo = conteo[['Expediente', 'FechaInicio', 'DireccionMunicipal', 'Hecho', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
+conteo.columns = ['Expediente', 'FechaInicio','DireccionMunicipal','Hecho','F_Conclusion']
 tabla_oficiosas = [
     {"expediente": str(row['Expediente']),
      "fecha": pd.to_datetime(row['FechaInicio']).strftime('%d/%m/%Y') if pd.notna(row['FechaInicio']) else "",
      "autoridad": str(row['DireccionMunicipal']),
+     "hecho": str(row['Hecho']).upper(),
      "f_conclusion": pd.to_datetime(row['F_Conclusion']).strftime('%d/%m/%Y') if pd.notna(row['F_Conclusion']) else ""}
     for _, row in conteo.iterrows()
 ]
@@ -351,13 +389,14 @@ conteo = df[df['GrupoVulnerable_expediente'].str.contains('10', case=False, na=F
 period = conteo.shape[0]
 if period == 0:
     period = "0"
-conteo = df[df['GrupoVulnerable_expediente'].str.contains('10', case=False, na=False)][['Expediente', 'FechaInicio', 'DireccionMunicipal', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
-conteo = conteo[['Expediente', 'FechaInicio', 'DireccionMunicipal', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
-conteo.columns = ['Expediente', 'FechaInicio','DireccionMunicipal','F_Conclusion']
+conteo = df[df['GrupoVulnerable_expediente'].str.contains('10', case=False, na=False)][['Expediente', 'FechaInicio', 'DireccionMunicipal','Hecho','F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
+conteo = conteo[['Expediente', 'FechaInicio', 'DireccionMunicipal', 'Hecho', 'F_Conclusion']].drop_duplicates().sort_values('FechaInicio')
+conteo.columns = ['Expediente', 'FechaInicio','DireccionMunicipal','Hecho','F_Conclusion']
 tabla_periodistas = [
     {"expediente": str(row['Expediente']),
      "fecha": pd.to_datetime(row['FechaInicio']).strftime('%d/%m/%Y') if pd.notna(row['FechaInicio']) else "",
      "autoridad": str(row['DireccionMunicipal']),
+     "hecho": str(row['Hecho']).upper(),
      "f_conclusion": pd.to_datetime(row['F_Conclusion']).strftime('%d/%m/%Y') if pd.notna(row['F_Conclusion']) else ""}
     for _, row in conteo.iterrows()
 ]
@@ -404,6 +443,7 @@ context = {
     "tabla_salidas": tabla_salidas,
     "tabla_recom_autoridades": tabla_recom_autoridades,
     "tabla_recom_hechos": tabla_recom_hechos,
+    "tabla_autoridades_federales_seguridad": tabla_autoridades_federales_seguridad,
     "tabla_autoridades_estatales": tabla_autoridades_estatales,
     "tabla_municipios_dsp": tabla_municipios_dsp,
     "tabla_oficiosas": tabla_oficiosas,

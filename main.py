@@ -1,10 +1,13 @@
 # main.py
+import uuid
 import streamlit as st
-from database import get_connection, cargar_catalogos, get_connection_mysql, get_connection_access
+from components import suny
+from database import cargar_catalogos, get_connection_mysql, log_event
 from components.sidebar import render_sidebar
-from functions import home, buscar, nueva_queja, ver_todos, status, nueva_NR, editar, nueva_R
-import subprocess
-import time
+from functions import home, buscar, reports, status, nueva_NR, editar, nueva_R
+from streamlit_float import float_init, float_parent
+from datetime import datetime
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 # Configuración de página
 st.set_page_config(
@@ -22,6 +25,12 @@ def load_css():
 
 # Inicializar estado de sesión
 def init_session_state():
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.start_time = datetime.now()
+
+    if 'last_page' not in st.session_state:
+        st.session_state.last_page = None
     if 'ir_a' not in st.session_state:
         st.session_state.ir_a = ""
     if 'expediente_editar' not in st.session_state:
@@ -31,26 +40,51 @@ def init_session_state():
     if 'sidebar_rendered' not in st.session_state:
         st.session_state.sidebar_rendered = False
 
+def get_client_ip():
+    try:
+        ctx = get_script_run_ctx()
+        if ctx and hasattr(ctx, "request") and ctx.request:
+            return ctx.request.remote_ip
+    except:
+        pass
+    return "unknown"
+
 # Función principal
 def main():
+    float_init()
     load_css()
     init_session_state()
     
     # Conexión a BD
-    #conn = get_connection()
-    #conn = get_connection_mysql()
-    conn = get_connection_access()
+    conn = get_connection_mysql()
     if not conn:
         st.error("No se pudo conectar a la base de datos")
         st.stop()
+
+    ip = get_client_ip()
+
+    # Registrar inicio de sesión (solo una vez)
+    if "logged" not in st.session_state:
+        log_event(
+            conn,
+            st.session_state.session_id,
+            ip,
+            "NEW_SESSION",
+            None
+        )
+        st.session_state.logged = True
     
-    # Cargar catálogos
     catalogos = cargar_catalogos(conn)
-    
-    # Renderizar sidebar
     opcion_seleccionada = render_sidebar()
-    
-    # Renderizar contenido según opción
+    if st.session_state.last_page != opcion_seleccionada:
+        log_event(
+            conn,
+            st.session_state.session_id,
+            ip,
+            "NAVIGATION",
+            opcion_seleccionada.encode('ascii','ignore').decode()
+        )
+        st.session_state.last_page = opcion_seleccionada
 
     # Guardar la opción en session_state
     st.session_state.opcion_actual = opcion_seleccionada
@@ -69,18 +103,18 @@ def main():
         nueva_R.render(conn, catalogos)
     elif opcion_seleccionada == "➕ Nueva No Recomendación":
         nueva_NR.render(conn, catalogos)
-    #elif opcion_seleccionada == "🔄 Editar Expediente":
-    #    if st.session_state.get('modo_edicion') and st.session_state.get('expediente_editar'):
-    #        editar.render(conn, catalogos, modo_edicion=True, expediente_editar=st.session_state.expediente_editar)
-    #    else:
-    #        editar.render(conn, catalogos)
     elif opcion_seleccionada == "🔄 Modificar Estatus":
         status.render(conn, catalogos)
     elif opcion_seleccionada == "📊 Reportes":
-        ver_todos.render(conn, catalogos)
+        reports.render(conn, catalogos)
     
     # Footer
     render_footer()
+
+    with st.container():
+        with st.popover("💬 Asistente Suny",type='primary'):
+            suny.chat_asistente()
+        float_parent(css="position:fixed; bottom: 1rem; left: 70rem; z-index: 1000;")
 
 def render_footer():
     st.markdown("""

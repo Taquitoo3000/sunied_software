@@ -1,9 +1,9 @@
 import streamlit as st
 from datetime import datetime
 from database import cargar_catalogos
-import pandas as pd
+from sqlalchemy import text
 
-def render(conn, catalogos):
+def render(engine, catalogos):
     st.header("➕ Registrar Nueva No Recomendación")
     st.markdown("---")
     # Formulario en pestañas para mejor organización
@@ -151,68 +151,56 @@ def render(conn, catalogos):
             if not faltantes:
                 with st.spinner("Guardando en todas las tablas..."):
                     try:
-                        # 1. Insertar en tabla NoRecomendaciones
-                        datos_basicos = (
-                            expediente,
-                            fecha_nr,
-                            subprocu,
-                            observaciones if observaciones else None,
-                            numero,
-                            quejoso
-                        )
-                        datos = (
-                            expediente,
-                            fecha_nr,
-                            quejoso,
-                            autoridad,
-                            hecho,
-                            numero,
-                            dependencia if dependencia else None,
-                            municipio if municipio else None,
-                            subprocu,
-                            observaciones if observaciones else None,
-                        )
-                        cursor = conn.cursor()
-                        if st.session_state.autoridades_lista:
-                            for auth in st.session_state.autoridades_lista:
-                                cursor.execute("""
-                                    INSERT INTO ImportarNoRecomendaciones 
-                                    (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
-                                    Dependencia, Municipio, SubProcu, Observaciones)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (
-                                    expediente,
-                                    fecha_nr,
-                                    quejoso,
-                                    auth['autoridad'],
-                                    auth['hecho'],
-                                    numero,
-                                    auth['dependencia'] if auth['dependencia'] else None,
-                                    auth['municipio'] if auth['municipio'] else None,
-                                    subprocu,
-                                    observaciones if observaciones else None
-                                ))
-                        else:
-                            cursor.execute("""
-                                    INSERT INTO ImportarNoRecomendaciones 
-                                    (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
-                                    Dependencia, Municipio, SubProcu, Observaciones)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (datos))
+                        with engine.begin() as conn:
+                            # 1. Insertar en tabla NoRecomendaciones
+                            if st.session_state.autoridades_lista:
+                                for auth in st.session_state.autoridades_lista:
+                                    conn.execute(text("""
+                                        INSERT INTO ImportarNoRecomendaciones 
+                                        (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
+                                        Dependencia, Municipio, SubProcu, Observaciones)
+                                        VALUES (:expediente, :fecha_nr, :quejoso, :autoridad, :hecho, :numero, :dependencia, :municipio, :subprocu, :observaciones)
+                                        """), {
+                                        'expediente': expediente,
+                                        'fecha_nr': fecha_nr,
+                                        'quejoso': quejoso,
+                                        'autoridad': auth['autoridad'],
+                                        'hecho': auth['hecho'],
+                                        'numero': numero,
+                                        'dependencia': auth['dependencia'] if auth['dependencia'] else None,
+                                        'municipio': auth['municipio'] if auth['municipio'] else None,
+                                        'subprocu': subprocu,
+                                        'observaciones': observaciones if observaciones else None
+                                    })
+                            else:
+                                conn.execute(text("""
+                                        INSERT INTO ImportarNoRecomendaciones 
+                                        (Expediente, Fecha_NR, Quejoso, Autoridad, Hecho, NumNR,
+                                        Dependencia, Municipio, SubProcu, Observaciones)
+                                        VALUES (:expediente, :fecha_nr, :quejoso, :autoridad, :hecho, :numero, :dependencia, :municipio, :subprocu, :observaciones)
+                                    """), {
+                                        'expediente': expediente,
+                                        'fecha_nr': fecha_nr,
+                                        'quejoso': quejoso,
+                                        'autoridad': autoridad,
+                                        'hecho': hecho,
+                                        'numero': numero,
+                                        'dependencia': dependencia if dependencia else None,
+                                        'municipio': municipio if municipio else None,
+                                        'subprocu': subprocu,
+                                        'observaciones': observaciones if observaciones else None
+                                    })
                         
-                        conn.commit()
-                        
-                        st.success("✅ Resolución guardada exitosamente!")
-                        st.balloons()
-                        # Limpiar cache de catálogos
-                        cargar_catalogos.clear()
-                        # Limpiar estado
-                        st.session_state.expediente_editar = ""
-                        st.balloons()
-                        # Opción: limpiar formulario o redirigir
-                        #rerun()
+                            st.success("✅ Resolución guardada exitosamente!")
+                            st.balloons()
+                            # Limpiar cache de catálogos
+                            cargar_catalogos.clear()
+                            # Limpiar estado
+                            st.session_state.expediente_editar = ""
+                            st.balloons()
+                            # Opción: limpiar formulario o redirigir
+                            #rerun()
                     except Exception as e:
-                        conn.rollback()
                         st.error(f"❌ Error al guardar: {str(e)[:200]}")
             else:
                 st.error("Complete todos los campos obligatorios (*)")

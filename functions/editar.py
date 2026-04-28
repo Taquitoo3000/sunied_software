@@ -1,9 +1,9 @@
 import streamlit as st
 from datetime import datetime
 from database import cargar_catalogos, cargar_datos_queja
-import pandas as pd
+from sqlalchemy import text
 
-def render(conn, catalogos, modo_edicion, expediente_editar=""):
+def render(engine, catalogos, modo_edicion, expediente_editar=""):
     # Determinar título según modo
     if modo_edicion and expediente_editar:
         st.header(f"✏️ Editar Queja: {expediente_editar}")
@@ -19,7 +19,7 @@ def render(conn, catalogos, modo_edicion, expediente_editar=""):
     # Cargar datos existentes si estamos en modo edición
     datos_existente = None
     if modo_edicion and expediente_editar:
-        datos_existente = cargar_datos_queja(conn, expediente_editar)
+        datos_existente = cargar_datos_queja(engine, expediente_editar)
         if not datos_existente:
             st.error(f"No se encontró la queja con expediente {expediente_editar}")
             return
@@ -410,6 +410,11 @@ def render(conn, catalogos, modo_edicion, expediente_editar=""):
                     placeholder="Código Postal del domicilio",
                     max_chars=10
                 )
+                localidad_domicilio = st.text_input(
+                    "Localidad",
+                    placeholder="Localidad del domicilio",
+                    max_chars=255
+                )
                 municipio_domicilio = st.text_input(
                     "Municipio",
                     placeholder="Municipio del domicilio",
@@ -455,6 +460,7 @@ def render(conn, catalogos, modo_edicion, expediente_editar=""):
                         'numero_interior': numero_interior,
                         'colonia': colonia,
                         'codigo_postal': codigo_postal,
+                        'localidad_domicilio': localidad_domicilio,
                         'municipio_domicilio': municipio_domicilio,
                         'estado_domicilio': estado_domicilio,
                         'telefono': telefono
@@ -487,140 +493,168 @@ def render(conn, catalogos, modo_edicion, expediente_editar=""):
     col_btn1, col_btn2, col_btn3 = st.columns(3)
     
     with col_btn1:
-        if st.button("💾 Guardar Queja", type="primary", use_container_width=True, key="btn_guardar_completo"):
+        if st.button("💾 Guardar Queja", type="primary", width='stretch', key="btn_guardar_completo"):
             if not faltantes:
                 with st.spinner("Guardando..."):
                     try:
-                        cursor = conn.cursor()
-                        
-                        if modo_edicion:
-                            # MODO EDICIÓN: Primero eliminar registros existentes
-                            # 1. Eliminar autoridades existentes
-                            cursor.execute("DELETE FROM Quejas WHERE Expediente = ?", (expediente,))
+                        with engine.begin() as conn:
+                            if modo_edicion:    # MODO EDICIÓN: Primero eliminar registros existentes
+                                conn.execute(text("DELETE FROM Quejas WHERE Expediente = :exp"), {'exp': expediente})
+                                conn.execute(text("DELETE FROM Quejas_Motivos WHERE Expediente = :exp"), {'exp': expediente})
+                                conn.execute(text("DELETE FROM Quejosos_Ampliado WHERE Expediente = :exp"), {'exp': expediente})
+                                
+                                # 4. Actualizar Expediente
+                                conn.execute(text("""
+                                    UPDATE Expediente 
+                                    SET `Fecha de Inicio` = :fecha_inicio, LugarProcedencia = :lugar_procedencia, CiudadDeLosHechos = :ciudad_hechos, 
+                                        Personas = :personas, Subprocu = :subprocu, Recepcion = :recepcion, `Organismo emisor` = :organismo_emisor, 
+                                        GrupoVulnerable = :grupo_vulnerable, MujerAgraviada = :mujer_agraviada
+                                    WHERE Expediente = :expediente
+                                    """), {
+                                        'fecha_inicio': fecha_inicio,
+                                        'lugar_procedencia': lugar_procedencia,
+                                        'ciudad_hechos': ciudad_hechos,
+                                        'personas': personas,
+                                        'subprocu': subprocu,
+                                        'recepcion': recepcion,
+                                        'organismo_emisor': organismo_emisor,
+                                        'grupo_vulnerable': grupo_vulnerable,
+                                        'mujer_agraviada': 1 if mujer_agraviada else 0,
+                                        'expediente': expediente
+                                    })
+                            else:
+                                # MODO NUEVO: Insertar en Expediente
+                                conn.execute(text("""
+                                    INSERT INTO Expediente 
+                                    (Expediente, Conclusión, Alias_Conclusión, F_Conclusion, `Fecha de Inicio`, 
+                                    LugarProcedencia, CiudadDeLosHechos, Personas, Subprocu, Recepcion, 
+                                    `Organismo emisor`, GrupoVulnerable, MujerAgraviada)
+                                    VALUES (:expediente, 'En trámite', 'En trámite', NULL, :fecha_inicio, :lugar_procedencia, :ciudad_hechos, :personas, :subprocu, :recepcion, :organismo_emisor, :grupo_vulnerable, :mujer_agraviada)
+                                    """), {
+                                        'expediente': expediente,
+                                        'fecha_inicio': fecha_inicio,
+                                        'lugar_procedencia': lugar_procedencia,
+                                        'ciudad_hechos': ciudad_hechos,
+                                        'personas': personas,
+                                        'subprocu': subprocu,
+                                        'recepcion': recepcion,
+                                        'organismo_emisor': organismo_emisor,
+                                        'grupo_vulnerable': grupo_vulnerable,
+                                        'mujer_agraviada': 1 if mujer_agraviada else 0
+                                    })
                             
-                            # 2. Eliminar motivo existente
-                            cursor.execute("DELETE FROM Quejas_Motivos WHERE Expediente = ?", (expediente,))
+                            # Insertar autoridades
+                            for auth in st.session_state.autoridades_lista:
+                                conn.execute(text("""
+                                    INSERT INTO Quejas 
+                                    (Expediente, FechaInicio, LugarProcedencia, Recepcion, Personas, Subprocu,
+                                    Observaciones, GrupoVulnerable, MujerAgraviada,
+                                    `Organismo emisor`, CiudadDeLosHechos, Autoridad, Hecho, 
+                                    Dependencia, Municipio, DireccionMunicipal, AliasDependencia, 
+                                    AliasDependenciaActuallizado, AliasDependenciaAuxiliar, TipoDependencia)
+                                    VALUES (:expediente, :fecha_inicio, :lugar_procedencia, :recepcion, :personas, :subprocu,
+                                    :observaciones, :grupo_vulnerable, :mujer_agraviada,
+                                    :organismo_emisor, :ciudad_hechos, :autoridad, :hecho, 
+                                    :dependencia, :municipio, :direccion_municipal, :alias_dependencia, 
+                                    :alias_actualizado, :alias_auxiliar, :tipo_dependencia)
+                                    """), {
+                                        'expediente': expediente,
+                                        'fecha_inicio': fecha_inicio,
+                                        'lugar_procedencia': lugar_procedencia,
+                                        'recepcion': recepcion,
+                                        'personas': personas,
+                                        'subprocu': subprocu,
+                                        'observaciones': observaciones if observaciones else None,
+                                        'grupo_vulnerable': grupo_vulnerable if grupo_vulnerable else None,
+                                        'mujer_agraviada': 1 if mujer_agraviada else 0,
+                                        'organismo_emisor': organismo_emisor if organismo_emisor else None,
+                                        'ciudad_hechos': ciudad_hechos,
+                                        'autoridad': auth['autoridad'],
+                                        'hecho': auth['hecho'],
+                                        'dependencia': auth['dependencia'],
+                                        'municipio': auth['municipio'],
+                                        'direccion_municipal': auth['direccion_municipal'],
+                                        'alias_dependencia': auth['alias_dependencia'],
+                                        'alias_actualizado': auth['alias_actualizado'],
+                                        'alias_auxiliar': auth['alias_auxiliar'],
+                                        'tipo_dependencia': auth['tipo_dependencia']
+                                    })
                             
-                            # 3. Eliminar personas existentes
-                            cursor.execute("DELETE FROM Quejosos_Ampliado WHERE Expediente = ?", (expediente,))
+                            # Insertar motivo
+                            if resumen and resumen.strip():
+                                conn.execute(text("""
+                                    INSERT INTO Quejas_Motivos (Expediente, Motivo)
+                                    VALUES (:expediente, :motivo)
+                                    """), {
+                                    'expediente': expediente,
+                                    'motivo': resumen.strip()
+                                })
                             
-                            # 4. Actualizar Expediente
-                            cursor.execute("""
-                                UPDATE Expediente 
-                                SET [Fecha de Inicio] = ?, LugarProcedencia = ?, CiudadDeLosHechos = ?, 
-                                    Personas = ?, Subprocu = ?, Recepcion = ?, [Organismo emisor] = ?, 
-                                    GrupoVulnerable = ?, MujerAgraviada = ?
-                                WHERE Expediente = ?
-                                """, (fecha_inicio, lugar_procedencia, ciudad_hechos,
-                                        personas, subprocu, recepcion, organismo_emisor, 
-                                        grupo_vulnerable, 1 if mujer_agraviada else 0,
-                                        expediente))
-                        else:
-                            # MODO NUEVO: Insertar en Expediente
-                            cursor.execute("""
-                                INSERT INTO Expediente 
-                                (Expediente, Conclusión, Alias_Conclusión, F_Conclusion, [Fecha de Inicio], 
-                                LugarProcedencia, CiudadDeLosHechos, Personas, Subprocu, Recepcion, 
-                                [Organismo emisor], GrupoVulnerable, MujerAgraviada)
-                                VALUES (?, 'En trámite', 'En trámite', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (
-                                    expediente,fecha_inicio, lugar_procedencia, ciudad_hechos,
-                                    personas, subprocu, recepcion, organismo_emisor, grupo_vulnerable,
-                                    1 if mujer_agraviada else 0
-                                ))
-                        
-                        # Insertar autoridades
-                        for auth in st.session_state.autoridades_lista:
-                            cursor.execute("""
-                                INSERT INTO Quejas 
-                                (Expediente, FechaInicio, LugarProcedencia, Recepcion, Personas, Subprocu,
-                                Observaciones, GrupoVulnerable, MujerAgraviada,
-                                [Organismo emisor], CiudadDeLosHechos, Autoridad, Hecho, 
-                                Dependencia, Municipio, DireccionMunicipal, AliasDependencia, 
-                                AliasDependenciaActuallizado, AliasDependenciaAuxiliar, TipoDependencia)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                """, (
-                                expediente, fecha_inicio, lugar_procedencia, recepcion, personas, subprocu,
-                                observaciones if observaciones else None, grupo_vulnerable if grupo_vulnerable else None,
-                                1 if mujer_agraviada else 0, organismo_emisor if organismo_emisor else None,
-                                ciudad_hechos, auth['autoridad'], auth['hecho'], auth['dependencia'],
-                                auth['municipio'], auth['direccion_municipal'], auth['alias_dependencia'],
-                                auth['alias_actualizado'], auth['alias_auxiliar'], auth['tipo_dependencia']))
-                        
-                        # Insertar motivo
-                        if resumen and resumen.strip():
-                            cursor.execute("""
-                                INSERT INTO Quejas_Motivos (Expediente, Motivo)
-                                VALUES (?, ?)
-                            """, (expediente, resumen.strip()))
-                        
-                        # Insertar personas
-                        if st.session_state.personas_lista:
-                            for per in st.session_state.personas_lista:
-                                cursor.execute("""
-                                    INSERT INTO Quejosos_Ampliado 
-                                    (Expediente, Nombre, [Quejoso/Agraviado], Actividad, Sexo, 
-                                    Edad, EdadNumero, CalidadPenal, Subprocu, 
-                                    [Ocupación-Nivel], Victima_Tipo, Fecha_Nacimiento, 
-                                    Nacionalidad, Curp, LugarNacimiento_Pais, LugarNacimiento_Entidad, 
-                                    LugarNacimiento_Mucipio, LugarNacimiento_Poblacion, [Sabe Leer], 
-                                    Escolaridad, Estado_Civil, Calle, Numero_ext, 
-                                    Numero_int, CodigoPostal, Colonia, Domicilio_Localidad, 
-                                    Domicilio_Municipio, Domicilio_Entidad, Telefono)
-                                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                                """, (
-                                    expediente, per['nombre'], per['quejoso'], per['ocupacion'] if per['ocupacion'] else None,
-                                    per['sexo'] if per['sexo'] else None, per['edad_nivel'] if per['edad_nivel'] else None,
-                                    str(per['edad']) if per['edad'] is not None and per['edad'] > 0 else None,
-                                    per['calidad'] if per['calidad'] else None, subprocu if subprocu else None,
-                                    per['ocupacion_nivel'] if per['ocupacion_nivel'] else None, None,
-                                    per['fecha_nacimiento'] if per['fecha_nacimiento'] else None,
-                                    per['nacionalidad'] if per['nacionalidad'] else None, per['curp'] if per['curp'] else None,
-                                    per['n_pais'] if per['n_pais'] else None, per['n_estado'] if per['n_estado'] else None,
-                                    per['n_municipio'] if per['n_municipio'] else None, None, per['sabe_leer'],
-                                    per['escolaridad'] if per['escolaridad'] else None,
-                                    per['estado_civil'] if per['estado_civil'] else None,
-                                    per['domicilio'] if per['domicilio'] else None,
-                                    per['numero_exterior'] if per['numero_exterior'] else None,
-                                    per['numero_interior'] if per['numero_interior'] else None,
-                                    per['codigo_postal'] if per['codigo_postal'] else None,
-                                    per['colonia'] if per['colonia'] else None, None,
-                                    per['municipio_domicilio'] if per['municipio_domicilio'] else None,
-                                    per['estado_domicilio'] if per['estado_domicilio'] else None,
-                                    per['telefono'] if per['telefono'] else None,
-                                ))
-                        
-                        conn.commit()
-                        
-                        if modo_edicion:
-                            st.success(f"✅ Expediente {expediente} actualizado exitosamente!")
-                        else:
-                            st.success("✅ Expediente guardado exitosamente!")
-                        
-                        st.balloons()
-                        
-                        # Limpiar cache de catálogos
-                        cargar_catalogos.clear()
-                        
-                        # Limpiar estado
-                        if 'expediente_editar' in st.session_state:
-                            del st.session_state.expediente_editar
-                        
-                        # Limpiar listas
-                        st.session_state.autoridades_lista = []
-                        st.session_state.personas_lista = []
-                        
-                        # Esperar un momento y recargar
-                        #st.rerun()
+                            # Insertar personas
+                            if st.session_state.personas_lista:
+                                for per in st.session_state.personas_lista:
+                                    conn.execute(text("""
+                                        INSERT INTO Quejosos_Ampliado 
+                                        (Expediente, Nombre, `Quejoso/Agraviado`, Actividad, Sexo, 
+                                        Edad, EdadNumero, CalidadPenal, Subprocu, 
+                                        `Ocupación-Nivel`, Fecha_Nacimiento, 
+                                        Nacionalidad, Curp, LugarNacimiento_Pais, LugarNacimiento_Entidad, 
+                                        LugarNacimiento_Mucipio, `Sabe Leer`, 
+                                        Escolaridad, Estado_Civil, Calle, Numero_ext, 
+                                        Numero_int, CodigoPostal, Colonia, Domicilio_Localidad, 
+                                        Domicilio_Municipio, Domicilio_Entidad, Telefono)
+                                        VALUES (:expediente, :nombre, :quejoso, :ocupacion, :sexo, :edad, :edad_numero, :calidad_penal, :subprocu, :ocupacion_nivel, :fecha_nacimiento, :nacionalidad, :curp, :lugar_nacimiento_pais, :lugar_nacimiento_entidad, :lugar_nacimiento_municipio, :sabe_leer, :escolaridad, :estado_civil, :calle, :numero_exterior, :numero_interior, :codigo_postal, :colonia, :domicilio_localidad, :domicilio_municipio, :domicilio_entidad, :telefono)
+                                    """), {
+                                        'expediente': expediente,
+                                        'nombre': per['nombre'],
+                                        'quejoso': per['quejoso'],
+                                        'ocupacion': per['ocupacion'] if per['ocupacion'] else None,
+                                        'sexo': per['sexo'] if per['sexo'] else None,
+                                        'edad': per['edad_nivel'] if per['edad_nivel'] else None,
+                                        'edad_numero': str(per['edad']) if per['edad'] is not None and per['edad'] > 0 else None,
+                                        'calidad_penal': per['calidad'] if per['calidad'] else None,
+                                        'subprocu': subprocu if subprocu else None,
+                                        'ocupacion_nivel': per['ocupacion_nivel'] if per['ocupacion_nivel'] else None,
+                                        'fecha_nacimiento': per['fecha_nacimiento'] if per['fecha_nacimiento'] else None,
+                                        'nacionalidad': per['nacionalidad'] if per['nacionalidad'] else None,
+                                        'curp': per['curp'] if per['curp'] else None,
+                                        'lugar_nacimiento_pais': per['n_pais'] if per['n_pais'] else None,
+                                        'lugar_nacimiento_entidad': per['n_estado'] if per['n_estado'] else None,
+                                        'lugar_nacimiento_municipio': per['n_municipio'] if per['n_municipio'] else None,
+                                        'sabe_leer': per['sabe_leer'] if per['sabe_leer'] else 1,
+                                        'escolaridad': per['escolaridad'] if per['escolaridad'] else None,
+                                        'estado_civil': per['estado_civil'] if per['estado_civil'] else None,
+                                        'calle': per['domicilio'] if per['domicilio'] else None,
+                                        'numero_exterior': per['numero_exterior'] if per['numero_exterior'] else None,
+                                        'numero_interior': per['numero_interior'] if per['numero_interior'] else None,
+                                        'codigo_postal': per['codigo_postal'] if per['codigo_postal'] else None,
+                                        'colonia': per['colonia'] if per['colonia'] else None,
+                                        'domicilio_localidad': per['localidad_domicilio'] if per['localidad_domicilio'] else None,
+                                        'domicilio_municipio': per['municipio_domicilio'] if per['municipio_domicilio'] else None,
+                                        'domicilio_entidad': per['estado_domicilio'] if per['estado_domicilio'] else None,
+                                        'telefono': per['telefono'] if per['telefono'] else None,
+                                    })
+                            
+                            st.success(f"✅ Expediente {expediente} {'actualizado' if modo_edicion else 'guardado'} exitosamente!")
+                            st.balloons()
+                            # Limpiar cache de catálogos
+                            cargar_catalogos.clear()
+                            
+                            # Limpiar estado
+                            if 'expediente_editar' in st.session_state:
+                                del st.session_state.expediente_editar
+                            
+                            # Limpiar listas
+                            st.session_state.autoridades_lista = []
+                            st.session_state.personas_lista = []
                         
                     except Exception as e:
-                        conn.rollback()
-                        st.error(f"❌ Error al guardar: {str(e)[:200]}")
+                        st.error(f"❌ Error al guardar: {str(e)[:300]}")
             else:
                 st.error(f"Complete los campos obligatorios faltantes: {', '.join(faltantes)}")
     
     with col_btn2:
-        if st.button("🔄 Limpiar Formulario", use_container_width=True, key="btn_limpiar_completo"):
+        if st.button("🔄 Limpiar Formulario", width='stretch', key="btn_limpiar_completo"):
             # Limpiar todas las listas y estados
             st.session_state.autoridades_lista = []
             st.session_state.personas_lista = []
