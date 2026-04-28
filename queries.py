@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import text
 
-def busqueda_general(conn, texto):
+def busqueda_general(engine, texto):
     try:
         if not texto or not texto.strip():
             return pd.DataFrame()
@@ -10,23 +10,24 @@ def busqueda_general(conn, texto):
         resultados = []
         tablas = ['Quejas', 'Expediente', 'Quejas_Motivos', 'Quejosos_Ampliado']
 
-        for tabla in tablas:
-            # Obtener columnas
-            columnas_result = conn.execute(text(f"SHOW COLUMNS FROM `{tabla}`"))
-            columnas = [row[0] for row in columnas_result]
+        with engine.connect() as conn:
+            for tabla in tablas:
+                # Obtener columnas
+                columnas_result = conn.execute(text(f"SHOW COLUMNS FROM `{tabla}`"))
+                columnas = [row[0] for row in columnas_result]
 
-            # Una query por tabla con OR
-            condiciones = " OR ".join([f"`{col}` LIKE :p{i}" for i, col in enumerate(columnas)])
-            params = {f"p{i}": f"%{texto}%" for i in range(len(columnas))}
+                # Una query por tabla con OR
+                condiciones = " OR ".join([f"`{col}` LIKE :p{i}" for i, col in enumerate(columnas)])
+                params = {f"p{i}": f"%{texto}%" for i in range(len(columnas))}
 
-            resultado = conn.execute(text(f"SELECT * FROM `{tabla}` WHERE {condiciones}"), params)
-            filas = resultado.fetchall()
+                resultado = conn.execute(text(f"SELECT * FROM `{tabla}` WHERE {condiciones}"), params)
+                filas = resultado.fetchall()
 
-            if filas:
-                col_names = list(resultado.keys())
-                df = pd.DataFrame(filas, columns=col_names).drop_duplicates()
-                df.insert(0, "_tabla", tabla)
-                resultados.append(df)
+                if filas:
+                    col_names = list(resultado.keys())
+                    df = pd.DataFrame(filas, columns=col_names).drop_duplicates()
+                    df.insert(0, "_tabla", tabla)
+                    resultados.append(df)
 
         return pd.concat(resultados, ignore_index=True) if resultados else pd.DataFrame()
 
