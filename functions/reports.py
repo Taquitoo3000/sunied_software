@@ -17,7 +17,8 @@ BASE = Path(__file__).parent
 def render(conn, catalogos):
     st.header("📊 Reportes")
     st.markdown("---")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 General", "📈 Estatus","📅 Semanal", "⭐ Personalizado", "🔮 Prediccion"])
+    #tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 General", "📈 Estatus","📅 Semanal", "⭐ Personalizado", "🔮 Prediccion"])
+    tab1, tab2, tab3, tab5 = st.tabs(["📊 General", "📈 Estatus","📅 Semanal", "🔮 Prediccion"])
     with tab1: # GENERAL
         with st.spinner("Cargando datos..."):
             df_todos = buscar_expedientes(conn)
@@ -303,7 +304,7 @@ def render(conn, catalogos):
                     st.error(f"❌ No se encontró el archivo Word especificado {archivo_word}")
                 except Exception as e:
                     st.error(f"❌ Error al leer el archivo: {str(e)}")
-
+    '''
     with tab4: # PERSONALIZADO
         carpeta = r"C:\Users\PRODHEG\Desktop\isael\sql_querys"
         archivos = os.listdir(carpeta)
@@ -345,7 +346,7 @@ def render(conn, catalogos):
                     
             except Exception as e:
                 st.error(f"Error al generar reporte: {str(e)}")
-
+    '''
     with tab5: # PREDICCION
         col_pred1, col_pred2 = st.columns(2)
         with col_pred1:
