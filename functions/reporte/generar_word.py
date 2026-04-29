@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-import pyodbc
+from sqlalchemy import create_engine
+from streamlit import secrets, error
 import re
 from datetime import datetime
 from docxtpl import DocxTemplate
@@ -21,20 +22,24 @@ MESES_ROMANOS = {
 now = datetime.now()
 fecha = f"{now.day:02d}/{MESES_ROMANOS[now.month]}/{now.year}"
 
-print("UPLOADING ACCESS...")
-archivo_access = 'D:/concentrado 2000-2026.mdb'
-conn_str = (
-    r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
-    r'DBQ=' + archivo_access + ';'
-)
-conn = pyodbc.connect(conn_str)
+print("UPLOADING SQL...")
+try:
+    engine = create_engine(
+        f"mysql+pymysql://{secrets['DB_USER']}:{secrets['DB_PASS']}"
+        f"@{secrets['DB_SERVER']}:{secrets.get('DB_PORT', 3306)}"
+        f"/{secrets['DB_NAME']}?charset=utf8mb4"
+    )
+except KeyError as e:
+    error(f"Falta variable en secrets: {e}")
+except Exception as e:
+    error(f"Error inesperado: {str(e)[:200]}")
 
-quejas = pd.read_sql("SELECT * FROM Quejas", conn)
-expediente = pd.read_sql("SELECT * FROM Expediente", conn)
-recomendaciones = pd.read_sql("SELECT * FROM Recomendaciones", conn)
-norecomendaciones = pd.read_sql("SELECT * FROM NoRecomendaciones", conn)
-conn.close()
-print("LOADED ACCESS")
+quejas = pd.read_sql("SELECT * FROM Quejas", engine)
+expediente = pd.read_sql("SELECT * FROM Expediente", engine)
+recomendaciones = pd.read_sql("SELECT * FROM Recomendaciones", engine)
+norecomendaciones = pd.read_sql("SELECT * FROM NoRecomendaciones", engine)
+engine.dispose()
+print("LOADED SQL")
 quejas['DireccionMunicipal'] = quejas['DireccionMunicipal'].str.upper()
 quejas['Municipio'] = quejas['Municipio'].str.upper()
 recomendaciones['Causa'] = recomendaciones['Causa'].str.upper()
