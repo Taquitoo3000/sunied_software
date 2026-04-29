@@ -172,10 +172,6 @@ def render(conn, catalogos):
     with tab3: # SEMANAL
         ruta_semanal = BASE / 'reporte'
         semanales = [f for f in os.listdir(ruta_semanal) if f.endswith('.docx')]
-        semanal_seleccionado = st.selectbox(
-            "Selecciona un reporte semanal:",
-            options=semanales
-        )
         if not semanales:
             st.info("No hay reportes semanales disponibles.")
         else:
@@ -248,10 +244,11 @@ def render(conn, catalogos):
                 try:
                     ruta_script = BASE / 'reporte' / 'generar_word.py'
                     with st.spinner("Construyendo Reporte..."):
-                        subprocess.run(['python', str(ruta_script)], check=True)
+                        from functions.reporte.generar_word import generar_reporte
+                        ruta_archivo=generar_reporte(conn)
                     hoy = datetime.now().strftime('%d-%m-%y')
-                    archivo_word = f"semanal_{hoy}.docx"
-                    ruta_archivo = BASE / 'reporte' / archivo_word
+                    #archivo_word = f"semanal_{hoy}.docx"
+                    #ruta_archivo = BASE / 'reporte' / archivo_word
                     doc = Document(ruta_archivo)
                     st.info(f"Archivo generado: {hoy}")
 
