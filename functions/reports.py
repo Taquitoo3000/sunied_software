@@ -170,7 +170,7 @@ def render(conn, catalogos):
                 st.error(f"Error al generar reporte: {str(e)}")
 
     with tab3: # SEMANAL
-        semanales = os.listdir(r"D:\SecretariaGeneral\Informatica\ESTADISTICAS\Tarjetas\2026")
+        semanales = os.listdir(BASE / 'reporte')
         semanal_seleccionado = st.selectbox(
             "Selecciona un reporte semanal:",
             options=semanales
