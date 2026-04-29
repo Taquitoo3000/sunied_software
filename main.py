@@ -61,14 +61,15 @@ def main():
         st.error("No se pudo conectar a la base de datos")
         st.stop()
 
-    ip = get_client_ip()
+    #ip = get_client_ip()
+    usuario_email = st.context.headers.get("X-Streamlit-User-Email", "unknown")
 
     # Registrar inicio de sesión (solo una vez)
     if "logged" not in st.session_state:
         log_event(
             conn,
             st.session_state.session_id,
-            ip,
+            usuario_email,
             "NEW_SESSION",
             None
         )
@@ -80,7 +81,7 @@ def main():
         log_event(
             conn,
             st.session_state.session_id,
-            ip,
+            usuario_email,
             "NAVIGATION",
             opcion_seleccionada.encode('ascii','ignore').decode()
         )
