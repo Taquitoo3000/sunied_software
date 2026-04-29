@@ -304,49 +304,7 @@ def render(conn, catalogos):
                     st.error(f"❌ No se encontró el archivo Word especificado {archivo_word}")
                 except Exception as e:
                     st.error(f"❌ Error al leer el archivo: {str(e)}")
-    """
-    with tab4: # PERSONALIZADO
-        carpeta = r"C:\Users\PRODHEG\Desktop\isael\sql_querys"
-        archivos = os.listdir(carpeta)
-        archivo_seleccionado = st.selectbox(
-            "Selecciona una query:",
-            options=archivos
-        )
 
-        st.write(f"Seleccionaste: {archivo_seleccionado}")
-
-        ruta_completa = os.path.join(carpeta, archivo_seleccionado)
-        with st.expander("Ver contenido del query"):
-            with open(ruta_completa, 'r', encoding='utf-8') as f:
-                contenido = f.read()
-                st.code(contenido, language='sql')
-
-        if st.button("Ejecutar Query", use_container_width=True, key="btn_personalizado", type="primary"):
-            try:
-                with st.spinner("Cargando datos..."):
-                    #conn2=get_connection()
-                    #df_reporte = busqueda_personalizada(conn2,archivo_seleccionado)
-                    st.session_state["df_reporte"] = df_reporte
-                    #df_reporte = pd.DataFrame.from_records(df_reporte, columns=columns)
-                    if "df_reporte" in st.session_state:
-                        df_reporte = st.session_state["df_reporte"]
-
-                        st.write("### Resultado")
-                        st.dataframe(df_reporte, width='stretch')
-
-                        xls_bytes = descargar_excel(df_reporte)
-                        st.download_button(
-                            label="📥 Descargar Excel",
-                            data=xls_bytes,
-                            file_name=f"quejas_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            width='stretch',
-                            key="btn_descargar_xls2"
-                        )
-                    
-            except Exception as e:
-                st.error(f"Error al generar reporte: {str(e)}")
-    """
     with tab5: # PREDICCION
         col_pred1, col_pred2 = st.columns(2)
         with col_pred1:
