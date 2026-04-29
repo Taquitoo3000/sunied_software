@@ -119,14 +119,14 @@ def generar_reporte(engine):
     ]
 
     # Autoridades inconsistentes
-    auth_incon_df = pd.read_excel(r'C:\Users\PRODHEG\Desktop\isael\General_2026.xlsx')
-    auth_incon = auth_incon_df[
-            auth_incon_df['Autoridad'].str.contains('null',na=False,case=False)
-            | auth_incon_df['Autoridad'].str.contains('no proporc',na=False,case=False)
-            | auth_incon_df['Autoridad'].isnull()
-        ].shape[0]
-    hecho_incon = auth_incon_df[auth_incon_df['Hecho'].str.contains('null',na=False,case=False)
-                            | auth_incon_df['Hecho'].isnull()].shape[0]
+    #auth_incon_df = pd.read_excel(r'C:\Users\PRODHEG\Desktop\isael\General_2026.xlsx')
+    #auth_incon = auth_incon_df[
+    #        auth_incon_df['Autoridad'].str.contains('null',na=False,case=False)
+    #        | auth_incon_df['Autoridad'].str.contains('no proporc',na=False,case=False)
+    #        | auth_incon_df['Autoridad'].isnull()
+    #    ].shape[0]
+    #hecho_incon = auth_incon_df[auth_incon_df['Hecho'].str.contains('null',na=False,case=False)
+    #                        | auth_incon_df['Hecho'].isnull()].shape[0]
 
     # Municipios con más señalamientos
     municipio = df.groupby(['Expediente', 'DireccionMunicipal', 'Municipio'])['Dependencia'].count().reset_index(name='CuentaDeDependencia')
