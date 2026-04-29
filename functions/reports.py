@@ -170,71 +170,79 @@ def render(conn, catalogos):
                 st.error(f"Error al generar reporte: {str(e)}")
 
     with tab3: # SEMANAL
-        semanales = os.listdir(BASE / 'reporte')
+        ruta_semanal = BASE / 'reporte'
+        semanales = [f for f in os.listdir(ruta_semanal) if f.endswith('.docx')]
         semanal_seleccionado = st.selectbox(
             "Selecciona un reporte semanal:",
             options=semanales
         )
-        if st.button("Buscar Reporte", width='stretch', key="btn_descargar", type="primary"):
-            with st.spinner("Cargando reporte..."):
-                try:
-                    archivo_word = semanal_seleccionado
-                    ruta_archivo = os.path.join(
-                        BASE / 'reporte',
-                        archivo_word
-                    )
-                    doc = Document(ruta_archivo)
-                    st.markdown("### 📄 Vista Previa del Reporte Semanal")
-                    # Contenedor con borde
-                    with st.container():
-                        st.markdown("""
-                        <style>
-                        .preview-box {
-                            border: 2px solid #e0e0e0;
-                            border-radius: 10px;
-                            padding: 20px;
-                            background-color: #f9f9f9;
-                            max-height: 500px;
-                            overflow-y: auto;
-                            color: #000000;
-                            text-align: center;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
-                        preview_html = '<div class="preview-box">'
-                        for i, para in enumerate(doc.paragraphs):
-                            texto = para.text.strip()
-                            if texto:
-                                # Detectar títulos
-                                if para.style.name.startswith('Heading'):
-                                    preview_html += f'<h3>{texto}</h3>'
-                                else:
-                                    preview_html += f'<p>{texto}</p>'
-                            
-                            if i >= 10:  # Limitar vista previa
-                                preview_html += '<p><i>... Ver documento completo descargándolo</i></p>'
-                                break
-                        preview_html += '</div>'
-                        st.markdown(preview_html, unsafe_allow_html=True)
-                    st.markdown("---")
+        if not semanales:
+            st.info("No hay reportes semanales disponibles.")
+        else:
+            semanal_seleccionado = st.selectbox(
+                "Selecciona un reporte semanal:",
+                options=semanales
+            )
+            if st.button("Buscar Reporte", width='stretch', key="btn_descargar", type="primary"):
+                with st.spinner("Cargando reporte..."):
+                    try:
+                        archivo_word = semanal_seleccionado
+                        ruta_archivo = os.path.join(
+                            ruta_semanal,
+                            archivo_word
+                        )
+                        doc = Document(ruta_archivo)
+                        st.markdown("### 📄 Vista Previa del Reporte Semanal")
+                        # Contenedor con borde
+                        with st.container():
+                            st.markdown("""
+                            <style>
+                            .preview-box {
+                                border: 2px solid #e0e0e0;
+                                border-radius: 10px;
+                                padding: 20px;
+                                background-color: #f9f9f9;
+                                max-height: 500px;
+                                overflow-y: auto;
+                                color: #000000;
+                                text-align: center;
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            preview_html = '<div class="preview-box">'
+                            for i, para in enumerate(doc.paragraphs):
+                                texto = para.text.strip()
+                                if texto:
+                                    # Detectar títulos
+                                    if para.style.name.startswith('Heading'):
+                                        preview_html += f'<h3>{texto}</h3>'
+                                    else:
+                                        preview_html += f'<p>{texto}</p>'
+                                
+                                if i >= 10:  # Limitar vista previa
+                                    preview_html += '<p><i>... Ver documento completo descargándolo</i></p>'
+                                    break
+                            preview_html += '</div>'
+                            st.markdown(preview_html, unsafe_allow_html=True)
+                        st.markdown("---")
 
-                    # Leer el archivo
-                    with open(ruta_archivo, "rb") as file:
-                        word_bytes = file.read()
-                    
-                    # Botón de descarga
-                    st.download_button(
-                        label="📥 Descargar Word",
-                        data=word_bytes,
-                        file_name=archivo_word,
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        width='stretch',
-                        key="btn_descargar_word_archivo"
-                    )
-                except FileNotFoundError:
-                    st.error(f"❌ No se encontró el archivo Word especificado {archivo_word}")
-                except Exception as e:
-                    st.error(f"❌ Error al leer el archivo: {str(e)}")
+                        # Leer el archivo
+                        with open(ruta_archivo, "rb") as file:
+                            word_bytes = file.read()
+                        
+                        # Botón de descarga
+                        st.download_button(
+                            label="📥 Descargar Word",
+                            data=word_bytes,
+                            file_name=archivo_word,
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            width='stretch',
+                            key="btn_descargar_word_archivo"
+                        )
+                    except FileNotFoundError:
+                        st.error(f"❌ No se encontró el archivo Word especificado {archivo_word}")
+                    except Exception as e:
+                        st.error(f"❌ Error al leer el archivo: {str(e)}")
 
         if st.button("Generar Reporte", width='stretch', key="btn_generar", type="primary"):
                 try:
