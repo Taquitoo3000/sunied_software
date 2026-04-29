@@ -62,7 +62,7 @@ def main():
         st.stop()
 
     #ip = get_client_ip()
-    usuario_email = st.experimental_user.get("email", "unknown")
+    usuario_email = st.user.email if hasattr(st, 'user') else "unknown"
 
     # Registrar inicio de sesión (solo una vez)
     if "logged" not in st.session_state:
