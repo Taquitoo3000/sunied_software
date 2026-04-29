@@ -180,7 +180,7 @@ def render(conn, catalogos):
                 try:
                     archivo_word = semanal_seleccionado
                     ruta_archivo = os.path.join(
-                        r"D:/SecretariaGeneral/Informatica/ESTADISTICAS/Tarjetas/2026",
+                        BASE / 'reporte',
                         archivo_word
                     )
                     doc = Document(ruta_archivo)
