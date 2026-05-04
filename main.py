@@ -4,7 +4,7 @@ import streamlit as st
 from components import suny
 from database import cargar_catalogos, get_connection_mysql, log_event
 from components.sidebar import render_sidebar
-from functions import home, buscar, reports, status, nueva_NR, editar, nueva_R
+from functions import home, buscar, reports, status, nueva_NR, editar, nueva_R, dashboard
 from streamlit_float import float_init, float_parent
 from datetime import datetime
 from streamlit.runtime.scriptrunner import get_script_run_ctx
@@ -109,6 +109,8 @@ def main():
         status.render(conn, catalogos)
     elif opcion_seleccionada == "📊 Reportes":
         reports.render(conn, catalogos)
+    elif opcion_seleccionada == "📊 DashBoard":
+        dashboard.render(conn)
     
     # Footer
     render_footer()

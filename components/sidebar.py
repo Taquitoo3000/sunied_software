@@ -27,7 +27,8 @@ def render_sidebar():
             "➕ Nueva Recomendación",
             "➕ Nueva No Recomendación",
             "🔄 Modificar Estatus",
-            "📊 Reportes"]
+            "📊 Reportes",
+            "📊 DashBoard"]
         if st.session_state.get('ir_a') == "buscar":
             opcion_seleccionada = 1
         elif st.session_state.get('ir_a') == "nueva":
@@ -42,6 +43,8 @@ def render_sidebar():
             opcion_seleccionada = 5
         elif st.session_state.get('ir_a') == "todas":
             opcion_seleccionada = 6
+        elif st.session_state.get('ir_a') == "dashboard":
+            opcion_seleccionada = 7
         else:
             opcion_seleccionada = 0
             
