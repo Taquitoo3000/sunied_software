@@ -71,10 +71,8 @@ def render(conn):
     with c3:
         st.plotly_chart(fig_eficiencia(df_f), width='stretch')
     with c4:
-        if 'DireccionMunicipal' in df2_f.columns and 'Dependencia' in df2_f.columns:
-            st.plotly_chart(fig_grupos_vulnerables(df2_f), width='stretch')
-        else:
-            st.info("Columnas DireccionMunicipal / Dependencia no disponibles en df2.")
+        columna = st.selectbox("Variable para Insidencia", ['DireccionMunicipal', 'Hecho'], key='var_insidencia')
+        st.plotly_chart(fig_insidencia(df2_f, columna), width='stretch')
  
     # ── MAPA DE CALOR ─────────────────────────
     st.plotly_chart(fig_mapa_calor(df_f, rango_anios), width='stretch')
@@ -287,17 +285,18 @@ def fig_eficiencia(df_f):
     return fig
  
  
-def fig_grupos_vulnerables(df2_f):
+def fig_insidencia(df2_f,columna):
     d = df2_f.copy()
-    d = d[d['DireccionMunicipal'].notna()]
-    d = d[~d['DireccionMunicipal'].isin(['null', ''])]
-    d = d.drop_duplicates(subset=['Expediente', 'Hecho', 'Dependencia'])
-    grupos = d['Dependencia'].value_counts().head(10).reset_index()
-    grupos.columns = ['Ciudad', 'Cantidad']
-    fig = px.bar(grupos, x='Cantidad', y='Ciudad', orientation='h',
-                 title='Procedencia de los Expedientes', template='plotly_white',
+    d = d[d[columna].notna()]
+    d = d[~d[columna].isin(['null', '', 'Indeterminado'])]
+    d = d.drop_duplicates(subset=['Expediente', columna])
+    grupos = d[columna].value_counts().head(10).reset_index()
+    grupos.columns = ['Variable', 'Cantidad']
+    grupos['Variable'] = grupos['Variable'].apply(lambda x: x if len(x) <= 30 else x[:27] + '...')
+    fig = px.bar(grupos, x='Cantidad', y='Variable', orientation='h',
+                 title='Insidencia', template='plotly_white',
                  color='Cantidad', color_continuous_scale='Blues')
-    fig.update_layout(xaxis_title="Número de Expedientes", yaxis_title="Ciudad")
+    fig.update_layout(xaxis_title="Insidencia", yaxis_title=columna)
     return fig
  
  
