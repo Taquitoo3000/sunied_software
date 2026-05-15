@@ -71,7 +71,8 @@ def render(conn):
     with c3:
         st.plotly_chart(fig_eficiencia(df_f), width='stretch')
     with c4:
-        columna = st.selectbox("Variable para Insidencia", ['DireccionMunicipal', 'Hecho'], key='var_insidencia')
+        columna = st.selectbox("Variable para Insidencia", ['Autoridad', 'Dependencia', 'Hecho'], key='var_insidencia')
+        columna = columna.replace('Autoridad','DireccionMunicipal')
         st.plotly_chart(fig_insidencia(df2_f, columna), width='stretch')
  
     # ── MAPA DE CALOR ─────────────────────────
