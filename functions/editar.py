@@ -218,12 +218,6 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                     index=None
                 )
                 
-                alias_actualizado = st.selectbox(
-                    "Alias Actualizado *",
-                    options=catalogos['AliasDependenciaActuallizado'],
-                    index=None
-                )
-                
                 alias_auxiliar = st.selectbox(
                     "Alias Auxiliar",
                     options=catalogos['AliasDependenciaAuxiliar'],
@@ -240,7 +234,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
             if st.button("➕ Agregar Autoridad", use_container_width=True):
                 # Validar campos obligatorios
                 if all([autoridad, municipio, dependencia, direccion_municipal, hecho, 
-                        alias_dependencia, alias_actualizado]):
+                        alias_dependencia]):
                     
                     nueva_entrada = {
                         'autoridad': autoridad,
@@ -249,7 +243,6 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                         'direccion_municipal': direccion_municipal,
                         'hecho': hecho,
                         'alias_dependencia': alias_dependencia,
-                        'alias_actualizado': alias_actualizado,
                         'alias_auxiliar': alias_auxiliar,
                         'tipo_dependencia': tipo_dependencia
                     }
@@ -551,7 +544,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                     Observaciones, GrupoVulnerable, MujerAgraviada,
                                     `Organismo emisor`, CiudadDeLosHechos, Autoridad, Hecho, 
                                     Dependencia, Municipio, DireccionMunicipal, AliasDependencia, 
-                                    AliasDependenciaActuallizado, AliasDependenciaAuxiliar, TipoDependencia)
+                                    AliasDependenciaAuxiliar, TipoDependencia)
                                     VALUES (:expediente, :fecha_inicio, :lugar_procedencia, :recepcion, :personas, :subprocu,
                                     :observaciones, :grupo_vulnerable, :mujer_agraviada,
                                     :organismo_emisor, :ciudad_hechos, :autoridad, :hecho, 
@@ -575,7 +568,6 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'municipio': auth['municipio'],
                                         'direccion_municipal': auth['direccion_municipal'],
                                         'alias_dependencia': auth['alias_dependencia'],
-                                        'alias_actualizado': auth['alias_actualizado'],
                                         'alias_auxiliar': auth['alias_auxiliar'],
                                         'tipo_dependencia': auth['tipo_dependencia']
                                     })

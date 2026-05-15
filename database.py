@@ -45,9 +45,8 @@ def cargar_catalogos(_engine):
         catalogos['organismoemisor']             = leer("SELECT DISTINCT Organismo FROM Catalogo_Organismo_Emisor WHERE Organismo IS NOT NULL ORDER BY Organismo", 'Organismo')
         catalogos['DireccionMunicipal']          = leer("SELECT DISTINCT DireccionMunicipal FROM Quejas WHERE DireccionMunicipal IS NOT NULL ORDER BY DireccionMunicipal", 'DireccionMunicipal')
         catalogos['AliasDependencia']            = leer("SELECT DISTINCT AliasDependencia FROM Quejas WHERE AliasDependencia IS NOT NULL ORDER BY AliasDependencia", 'AliasDependencia')
-        catalogos['AliasDependenciaActuallizado']= leer("SELECT DISTINCT AliasDependenciaActuallizado FROM Quejas WHERE AliasDependenciaActuallizado IS NOT NULL ORDER BY AliasDependenciaActuallizado", 'AliasDependenciaActuallizado')
         catalogos['TipoDependencia']             = ['Autónomo', 'Poder del Estado']
-        catalogos['AliasDependenciaAuxiliar']    = ['Seguridad Penitenciaria']
+        catalogos['AliasDependenciaAuxiliar']    = ['Seguridad Penitenciaria', 'Personal Administrativo', 'Personal Operativo', 'Personal Sustancial']
         catalogos['Escolaridad']                 = leer("SELECT DISTINCT Escolaridad FROM Quejosos_Ampliado WHERE Escolaridad IS NOT NULL ORDER BY Escolaridad", 'Escolaridad')
         catalogos['Status']                      = leer("SELECT DISTINCT Conclusión FROM Expediente WHERE Conclusión IS NOT NULL ORDER BY Conclusión", 'Conclusión')
         catalogos['Alias_Status']                = leer("SELECT DISTINCT Alias_Conclusión FROM Expediente WHERE Alias_Conclusión IS NOT NULL ORDER BY Alias_Conclusión", 'Alias_Conclusión')
@@ -94,8 +93,7 @@ def cargar_datos_queja(engine, expediente):
         result =    conn.execute(text("""
             SELECT DISTINCT 
                 Autoridad, Municipio, Dependencia, DireccionMunicipal, 
-                Hecho, AliasDependencia, AliasDependenciaActuallizado, 
-                AliasDependenciaAuxiliar, TipoDependencia
+                Hecho, AliasDependencia, AliasDependenciaAuxiliar, TipoDependencia
             FROM Quejas 
             WHERE Expediente = :expediente AND Autoridad IS NOT NULL
         """), {'expediente': expediente})
@@ -107,9 +105,8 @@ def cargar_datos_queja(engine, expediente):
                 'direccion_municipal':row[3],
                 'hecho':              row[4],
                 'alias_dependencia':  row[5],
-                'alias_actualizado':  row[6],
-                'alias_auxiliar':     row[7],
-                'tipo_dependencia':   row[8],
+                'alias_auxiliar':     row[6],
+                'tipo_dependencia':   row[7],
             }
             for row in result.fetchall()
         ]
