@@ -481,6 +481,8 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
     }
     
     faltantes = [campo for campo, valor in campos_obligatorios.items() if not valor]
+    if not st.session_state.autoridades_lista:
+        faltantes.append("Agregue al menos una Autoridad Señalada (Tab 2)")
     
     # Botones de acción
     col_btn1, col_btn2, col_btn3 = st.columns(3)
