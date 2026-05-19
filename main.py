@@ -42,12 +42,14 @@ def init_session_state():
 
 def get_client_ip():
     try:
-        ctx = get_script_run_ctx()
-        if ctx and hasattr(ctx, "request") and ctx.request:
-            return ctx.request.remote_ip
+        headers = st.context.headers
+        # Detrás de un proxy/Streamlit Cloud
+        forwarded = headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return headers.get("X-Real-Ip", "unknown")
     except:
-        pass
-    return "unknown"
+        return "unknown"
 
 # Función principal
 def main():
@@ -61,7 +63,7 @@ def main():
         st.error("No se pudo conectar a la base de datos")
         st.stop()
 
-    #ip = get_client_ip()
+    ip = get_client_ip()
     usuario_email = st.user.get("email") if st.user else None
     usuario_email = usuario_email or "unknown"
 
@@ -70,6 +72,7 @@ def main():
         log_event(
             conn,
             st.session_state.session_id,
+            ip,
             usuario_email,
             "NEW_SESSION",
             None
@@ -82,6 +85,7 @@ def main():
         log_event(
             conn,
             st.session_state.session_id,
+            ip,
             usuario_email,
             "NAVIGATION",
             opcion_seleccionada.encode('ascii','ignore').decode()
