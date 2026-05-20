@@ -97,7 +97,7 @@ def cargar_datos_queja(engine, expediente):
         result =    conn.execute(text("""
             SELECT DISTINCT 
                 Autoridad, Municipio, Dependencia, DireccionMunicipal, 
-                Hecho, AliasDependencia
+                Hecho, AliasDependencia, AliasDependenciaAuxiliar
             FROM Quejas 
             WHERE Expediente = :expediente AND Autoridad IS NOT NULL
         """), {'expediente': expediente})
@@ -109,6 +109,7 @@ def cargar_datos_queja(engine, expediente):
                 'direccion_municipal':row[3],
                 'hecho':              row[4],
                 'alias_dependencia':  row[5],
+                'alias_auxiliar': row[6]
             }
             for row in result.fetchall()
         ]
