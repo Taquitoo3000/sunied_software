@@ -3,7 +3,7 @@ import streamlit as st
 
 def render():
     """Renderiza la página de inicio"""
-    st.title("SUNIED v4.0")
+    st.title("SUNIED v4.2")
     st.subheader("Software de la Unidad de Información Estadística y Documental - PRODHEG")
     st.markdown("---")
     st.header("Bienvenido")

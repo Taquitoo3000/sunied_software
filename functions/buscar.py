@@ -41,14 +41,15 @@ def render(conn, catalogos):
                         # Resumen
                         col_res1, col_res2, col_res3 , col_res4 = st.columns(4)
                         with col_res1:
-                            st.metric("Registros", len(datos))
-                        with col_res2:
                             fecha = datos['FechaInicio'].iloc[0]
                             st.metric("Fecha de Inicio", fecha.strftime("%d/%m/%Y") if pd.notna(fecha) else "Sin fecha")
-                        with col_res3:
-                            st.metric("Municipio", datos['Municipio'].iloc[0])
-                        with col_res4:
+                        with col_res2:
                             st.metric("Estatus", datos['Conclusión'].iloc[0])
+                        with col_res3:
+                            fecha = datos['F_Conclusion'].iloc[0]
+                            st.metric("Fecha de Salida", fecha.strftime("%d/%m/%Y") if pd.notna(fecha) else "")
+                        with col_res4:
+                            st.metric("Municipio", datos['Municipio'].iloc[0])
                         
                         # Detalles
                         st.dataframe(

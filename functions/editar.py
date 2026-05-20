@@ -1,6 +1,6 @@
 import streamlit as st
 from datetime import datetime
-from database import cargar_catalogos, cargar_datos_queja
+from database import cargar_catalogos, cargar_datos_queja, cargar_autoridades
 from sqlalchemy import text
 
 def render(engine, catalogos, modo_edicion, expediente_editar=""):
@@ -17,6 +17,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
     st.markdown("---")
     
     # Cargar datos existentes si estamos en modo edición
+    catalogo_autoridades=cargar_autoridades(engine)
     datos_existente = None
     if modo_edicion and expediente_editar:
         datos_existente = cargar_datos_queja(engine, expediente_editar)
@@ -119,13 +120,21 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                 max_chars=450
             )
             
-            grupo_vulnerable_default = None
+            grupo_vulnerable_default = []
             if datos_existente:
-                grupo_vulnerable_default = datos_existente['datos_basicos'][7]
-            grupo_vulnerable = st.selectbox(
+                gv = datos_existente['datos_basicos'][7]
+                if gv:
+                    valores = [v.strip() for v in gv.split(',')]
+                    catalogo_lower = {v.lower(): v for v in catalogos['grupovulnerable']}
+                    grupo_vulnerable_default = [
+                        catalogo_lower[v.lower()]
+                        for v in valores
+                        if v.lower() in catalogo_lower
+                    ]
+            grupo_vulnerable = st.multiselect(
                 "Grupo Vulnerable",
                 options=catalogos['grupovulnerable'],
-                index=catalogos['grupovulnerable'].index(grupo_vulnerable_default) if grupo_vulnerable_default in catalogos['grupovulnerable'] else None
+                default=grupo_vulnerable_default
             )
             
             mujer_agraviada_default = bool(datos_existente['datos_basicos'][8]) if datos_existente else False
@@ -181,51 +190,51 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
         
             col1, col2 = st.columns(2)
             with col1:
-                autoridad = st.text_input(
-                    "Autoridad Señalada *",
-                    placeholder="Nombre de la autoridad específica",
-                    max_chars=255
-                )
-                municipio = st.selectbox(
-                    "Municipio *",
-                    options=catalogos['municipios'],
-                    index=None,
-                    placeholder="Autoridad de Municipio, Estatal o Federal"
-                )
-                dependencia = st.selectbox(
-                    "Dependencia *",
-                    options=catalogos['dependencias'],
-                    index=None,
-                    placeholder="Seleccione la dependencia"
-                )
-                direccion_municipal = st.selectbox(
-                    "Dirección Municipal *",
-                    placeholder="Dirección de la Dependencia",
-                    options=catalogos['DireccionMunicipal'],
-                    index=None
-                )
-            
-            with col2:
                 hecho = st.selectbox(
                     "Hecho Denunciado *",
                     options=catalogos['hechos'],
                     index=None,
                     placeholder="Seleccione tipo de hecho"
                 )
+                autoridad = st.text_input(
+                    "Autoridad Señalada *",
+                    placeholder="Nombre de la autoridad específica",
+                    max_chars=255
+                )
+                ambito = st.selectbox(
+                    "Ambito *",
+                    options = catalogo_autoridades['Ambito'].unique().tolist(),
+                    index=None,
+                    placeholder="Seleccione el ambito"
+                )
+                municipio = st.selectbox(
+                    "Municipio *",
+                    options=catalogo_autoridades[catalogo_autoridades['Ambito'] == ambito]['Municipio'].unique().tolist(),
+                    index=None,
+                    placeholder="Seleccione el municipio"
+                )
+            
+            with col2:
+                dependencia = st.selectbox(
+                    "Dependencia *",
+                    options=catalogo_autoridades[catalogo_autoridades['Municipio'] == municipio]['Dependencia'].unique().tolist(),
+                    index=None,
+                    placeholder="Seleccione la dependencia"
+                )
                 alias_dependencia = st.selectbox(
                     "Alias de Dependencia *",
-                    options=catalogos['AliasDependencia'],
+                    options=catalogo_autoridades[(catalogo_autoridades['Dependencia'] == dependencia) & (catalogo_autoridades['Municipio'] == municipio)]['AliasDependencia'].unique().tolist(),
                     index=None
                 )
-                
+                direccion_municipal = st.selectbox(
+                    "Dirección Municipal *",
+                    placeholder="Dirección de la Dependencia",
+                    options=catalogo_autoridades[catalogo_autoridades['AliasDependencia'] == alias_dependencia]['DireccionMunicipal'].unique().tolist(),
+                    index=None
+                )
                 alias_auxiliar = st.selectbox(
                     "Alias Auxiliar",
                     options=catalogos['AliasDependenciaAuxiliar'],
-                    index=None
-                )
-                tipo_dependencia = st.selectbox(
-                    "Tipo de Dependencia",
-                    options=catalogos['TipoDependencia'],
                     index=None
                 )
 
@@ -243,8 +252,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                         'direccion_municipal': direccion_municipal,
                         'hecho': hecho,
                         'alias_dependencia': alias_dependencia,
-                        'alias_auxiliar': alias_auxiliar,
-                        'tipo_dependencia': tipo_dependencia
+                        'alias_auxiliar': alias_auxiliar
                     }
                     
                     st.session_state.autoridades_lista.append(nueva_entrada)
@@ -280,6 +288,10 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                         if st.button("❌", key=f"eliminar_per_2{i}"):
                             del st.session_state.personas_lista[i]
                             st.rerun()
+                    with st.expander("Ver detalles"):
+                        for key, valor in per.items():
+                            if key not in ['nombre', 'quejoso']:
+                                st.markdown(f"**{key.replace('_', ' ').capitalize()}**: {valor}")
             
             # Separador
             st.divider()
@@ -493,6 +505,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                 with st.spinner("Guardando..."):
                     try:
                         with engine.begin() as conn:
+                            grupo_vulnerable_str = ','.join(grupo_vulnerable) if grupo_vulnerable else None
                             if modo_edicion:    # MODO EDICIÓN: Primero eliminar registros existentes
                                 conn.execute(text("DELETE FROM Quejas WHERE Expediente = :exp"), {'exp': expediente})
                                 conn.execute(text("DELETE FROM Quejas_Motivos WHERE Expediente = :exp"), {'exp': expediente})
@@ -513,7 +526,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'subprocu': subprocu,
                                         'recepcion': recepcion,
                                         'organismo_emisor': organismo_emisor,
-                                        'grupo_vulnerable': grupo_vulnerable,
+                                        'grupo_vulnerable': grupo_vulnerable_str,
                                         'mujer_agraviada': 1 if mujer_agraviada else 0,
                                         'expediente': expediente
                                     })
@@ -534,7 +547,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'subprocu': subprocu,
                                         'recepcion': recepcion,
                                         'organismo_emisor': organismo_emisor,
-                                        'grupo_vulnerable': grupo_vulnerable,
+                                        'grupo_vulnerable': grupo_vulnerable_str,
                                         'mujer_agraviada': 1 if mujer_agraviada else 0
                                     })
                             
@@ -546,12 +559,12 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                     Observaciones, GrupoVulnerable, MujerAgraviada,
                                     `Organismo emisor`, CiudadDeLosHechos, Autoridad, Hecho, 
                                     Dependencia, Municipio, DireccionMunicipal, AliasDependencia, 
-                                    AliasDependenciaAuxiliar, TipoDependencia)
+                                    AliasDependenciaAuxiliar)
                                     VALUES (:expediente, :fecha_inicio, :lugar_procedencia, :recepcion, :personas, :subprocu,
                                     :observaciones, :grupo_vulnerable, :mujer_agraviada,
                                     :organismo_emisor, :ciudad_hechos, :autoridad, :hecho, 
                                     :dependencia, :municipio, :direccion_municipal, :alias_dependencia, 
-                                    :alias_actualizado, :alias_auxiliar, :tipo_dependencia)
+                                    :alias_actualizado, :alias_auxiliar)
                                     """), {
                                         'expediente': expediente,
                                         'fecha_inicio': fecha_inicio,
@@ -560,7 +573,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'personas': personas,
                                         'subprocu': subprocu,
                                         'observaciones': observaciones if observaciones else None,
-                                        'grupo_vulnerable': grupo_vulnerable if grupo_vulnerable else None,
+                                        'grupo_vulnerable': grupo_vulnerable_str if grupo_vulnerable_str else None,
                                         'mujer_agraviada': 1 if mujer_agraviada else 0,
                                         'organismo_emisor': organismo_emisor if organismo_emisor else None,
                                         'ciudad_hechos': ciudad_hechos,
@@ -570,8 +583,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'municipio': auth['municipio'],
                                         'direccion_municipal': auth['direccion_municipal'],
                                         'alias_dependencia': auth['alias_dependencia'],
-                                        'alias_auxiliar': auth['alias_auxiliar'],
-                                        'tipo_dependencia': auth['tipo_dependencia']
+                                        'alias_auxiliar': auth['alias_auxiliar']
                                     })
                             
                             # Insertar motivo

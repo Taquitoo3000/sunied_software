@@ -94,10 +94,16 @@ def render(conn, catalogos):
                                 help="Fecha en que se concluyó el expediente"
                             )
 
-                            grupo_vulnerable = st.selectbox(
+                            gv_actual = df['GrupoVulnerable'].iloc[0]
+                            if gv_actual:
+                                catalogo_lower = {v.lower(): v for v in opciones_gv}
+                                gv_default = [catalogo_lower[v.strip().lower()] for v in gv_actual.split(',') if v.strip().lower() in catalogo_lower]
+                            else:
+                                gv_default = []
+                            grupo_vulnerable = st.multiselect(
                                 "Grupo Vulnerable",
-                                options=[""] + opciones_gv,
-                                index=0
+                                options=opciones_gv,
+                                default=gv_default
                             )
                             organismo_emisor = st.selectbox(
                                 "Organismo Emisor",
@@ -145,7 +151,7 @@ def render(conn, catalogos):
                                         "desglose": desglose,
                                         "fecha_conclusion": None,
                                         "fecha_entrada": None,
-                                        "grupo_vulnerable": grupo_vulnerable if grupo_vulnerable else None,
+                                        "grupo_vulnerable": ','.join(grupo_vulnerable) if grupo_vulnerable else None,
                                         "organismo_emisor": organismo_emisor if organismo_emisor else None,
                                         "tipo_violencia": tipo_violencia if tipo_violencia else None,
                                         "ambito_violencia": ambito_violencia if ambito_violencia else None,

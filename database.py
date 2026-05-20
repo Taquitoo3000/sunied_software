@@ -37,7 +37,7 @@ def cargar_catalogos(_engine):
         catalogos['hechos']                      = leer("SELECT DISTINCT Hecho FROM Quejas WHERE Hecho IS NOT NULL AND YEAR(FechaInicio)>2023 ORDER BY Hecho", 'Hecho')
         catalogos['hechosNR']                    = leer("SELECT DISTINCT Hecho FROM NoRecomendaciones WHERE Hecho IS NOT NULL AND YEAR(Fecha_NR)>2024 ORDER BY Hecho", 'Hecho')
         catalogos['hechosR']                     = leer("SELECT DISTINCT Causa FROM Recomendaciones WHERE Causa IS NOT NULL AND YEAR(FechaRecom)>2024 ORDER BY Causa", 'Causa')
-        catalogos['sub']                         = leer("SELECT DISTINCT Subprocu FROM Quejas WHERE Subprocu IS NOT NULL ORDER BY Subprocu", 'Subprocu')
+        catalogos['sub']                         = ['A (ZONA A)', 'B (ZONA B)', 'C (ZONA C)', 'D (ZONA D)', 'E (ZONA E)']
         catalogos['dependencias']                = leer("SELECT DISTINCT Dependencia FROM Quejas WHERE Dependencia IS NOT NULL ORDER BY Dependencia", 'Dependencia')
         catalogos['dependenciasNR']              = leer("SELECT DISTINCT Dependencia FROM NoRecomendaciones WHERE Dependencia IS NOT NULL AND YEAR(Fecha_NR)>2024 ORDER BY Dependencia", 'Dependencia')
         catalogos['autoridadR']                  = leer("SELECT DISTINCT Autoridad FROM Recomendaciones WHERE Autoridad IS NOT NULL AND YEAR(FechaRecom)>2024 ORDER BY Autoridad", 'Autoridad')
@@ -60,6 +60,10 @@ def cargar_catalogos(_engine):
         catalogos.setdefault('dependencias', [])
  
     return catalogos
+
+def cargar_autoridades(_engine):
+    autoridades = pd.read_sql("SELECT DISTINCT * FROM Catalogo_Autoridades", _engine)
+    return autoridades
 
 def cargar_datos_queja(engine, expediente):
     with engine.connect() as conn:
@@ -93,7 +97,7 @@ def cargar_datos_queja(engine, expediente):
         result =    conn.execute(text("""
             SELECT DISTINCT 
                 Autoridad, Municipio, Dependencia, DireccionMunicipal, 
-                Hecho, AliasDependencia, AliasDependenciaAuxiliar, TipoDependencia
+                Hecho, AliasDependencia
             FROM Quejas 
             WHERE Expediente = :expediente AND Autoridad IS NOT NULL
         """), {'expediente': expediente})
@@ -105,8 +109,6 @@ def cargar_datos_queja(engine, expediente):
                 'direccion_municipal':row[3],
                 'hecho':              row[4],
                 'alias_dependencia':  row[5],
-                'alias_auxiliar':     row[6],
-                'tipo_dependencia':   row[7],
             }
             for row in result.fetchall()
         ]
