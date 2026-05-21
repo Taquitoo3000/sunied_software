@@ -10,7 +10,7 @@ def render(conn, catalogos):
     st.markdown("---")
     
     # Tabs para diferentes funcionalidades
-    tab1, tab2, tab3 = st.tabs(["🔍 Quejas", "🔍 Recomendacion" "📈 Reporte de Estatus"])
+    tab1, tab2, tab3 = st.tabs(["🔍 Quejas", "🔍 Recomendacion", "📈 Reporte de Estatus"])
     
     with tab1:  # Quejas
         st.subheader("Buscar Expediente para Modificar")
@@ -230,7 +230,7 @@ def render(conn, catalogos):
                     r.Recomendacion,
                     r.FechaCumplimiento
                 FROM Recomendaciones as r
-                WHERE q.Expediente LIKE %(exp)s
+                WHERE r.Expediente LIKE %(exp)s
                 """
                 df = pd.read_sql_query(query, conn, params={'exp': f"%{recomendacion_buscar}%"})
                 
@@ -281,8 +281,6 @@ def render(conn, catalogos):
                                 st.error("Debe actualizar un estatus")
                             else:
                                 try:
-                                    cursor = conn.cursor()
-                                    
                                     # Preparar datos
                                     params = {'respuesta': nueva_respuesta,
                                               'fecha_cumplimiento': None,
@@ -312,7 +310,6 @@ def render(conn, catalogos):
                                     st.balloons()
                                     
                                 except Exception as e:
-                                    conn.rollback()
                                     st.error(f"❌ Error al actualizar: {str(e)}")
 
                 else:
