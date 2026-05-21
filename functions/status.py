@@ -10,9 +10,9 @@ def render(conn, catalogos):
     st.markdown("---")
     
     # Tabs para diferentes funcionalidades
-    tab1, tab2 = st.tabs(["🔍 Buscar y Modificar", "📈 Reporte de Estatus"])
+    tab1, tab2, tab3 = st.tabs(["🔍 Quejas", "🔍 Recomendacion" "📈 Reporte de Estatus"])
     
-    with tab1:  # Búsqueda individual
+    with tab1:  # Quejas
         st.subheader("Buscar Expediente para Modificar")
         
         col1, col2 = st.columns([3, 1])
@@ -202,8 +202,123 @@ def render(conn, catalogos):
 
                 else:
                     st.warning("⚠️ No se encontró el expediente")
-    
-    with tab2:  # Reportes
+
+    with tab2:  # Recomendaciones
+        st.subheader("Buscar Recomendación para Modificar")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            recomendacion_buscar = st.text_input(
+                "Número de Expediente:",
+                placeholder="Ej: 0123/2024-A",
+                key="buscar_recomendacion"
+            )
+        with col2:
+            st.write("")
+            st.write("")
+            buscar_recom_btn = st.button("🔍 Buscar", use_container_width=True, type="primary", key='btn_buscar_recomendacion')
+        
+        if buscar_recom_btn or recomendacion_buscar:
+            with st.spinner("Buscando recomendación..."):
+                # Buscar expediente
+                query = """
+                SELECT
+                    r.Expediente,
+                    r.FechaRecom,
+                    r.Quejoso,
+                    r.Respuesta,
+                    r.Recomendacion,
+                    r.FechaCumplimiento
+                FROM Recomendaciones as r
+                WHERE q.Expediente LIKE %(exp)s
+                """
+                df = pd.read_sql_query(query, conn, params={'exp': f"%{recomendacion_buscar}%"})
+                
+                if not df.empty:
+                    st.success(f"✅ Recomendación encontrada: {df['Expediente'].iloc[0]}")
+                    col3, col4 = st.columns(2)
+                    with col3:
+                        st.metric("Expediente", df['Expediente'].iloc[0])
+                    with col4:
+                        st.metric("Fecha de Recomendación", df['FechaRecom'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['FechaRecom'].iloc[0]) else "N/A")
+                    st.metric("Quejoso", df['Quejoso'].iloc[0])
+                    st.metric("Respuesta", df['Respuesta'].iloc[0])
+                    st.metric("Fecha de Cumplimiento", df['FechaCumplimiento'].iloc[0].strftime("%d/%m/%Y") if pd.notnull(df['FechaCumplimiento'].iloc[0]) else "N/A")
+                    # Mostrar información actual
+                    with st.expander("📋 Puntos de la Recomendación"):
+                        st.write(df['Recomendacion'].iloc[0])
+                    
+                    # Formulario para modificar estatus
+                    st.subheader("📝 Actualizar Estatus de Cumplimiento")
+                    
+                    with st.form(key="form_actualizar_recomendacion"):
+                        col_rec1, col_rec2 = st.columns(2)
+                        
+                        with col_rec1:
+                            # Opciones de estatus
+                            opciones_respuesta = ['Sin Cumplimiento','Vías de cumplimiento','No Aceptada','Cumplimiento']
+                            
+                            nueva_respuesta = st.selectbox(
+                                "Nuevo Estatus *",
+                                options=[""] + opciones_respuesta,
+                                index=0
+                            )
+                        
+                        with col_rec2:
+                            fecha_cumplimiento = st.date_input(
+                                "Fecha de Cumplimiento",
+                                value=None,
+                                help="Fecha en que se cumplió la recomendación"
+                            )
+                        
+                        # Botón para guardar
+                        col_btn_rec1, col_btn_rec2 = st.columns([1, 3])
+                        with col_btn_rec1:
+                            submitted = st.form_submit_button("💾 Guardar Cambios", type="primary", key='recomendacion')
+                        
+                        if submitted:
+                            if not nueva_respuesta:
+                                st.error("Debe actualizar un estatus")
+                            else:
+                                try:
+                                    cursor = conn.cursor()
+                                    
+                                    # Preparar datos
+                                    params = {'respuesta': nueva_respuesta,
+                                              'fecha_cumplimiento': None,
+                                              'expediente': df['Expediente'].iloc[0]}
+                                    
+                                    # Si hay fecha de conclusión, convertirla
+                                    if fecha_cumplimiento:
+                                        try:
+                                            #fecha_conv = datetime.strptime(fecha_conclusion, "%d/%m/%Y").date()
+                                            #params.append(fecha_conv)
+                                            params["fecha_cumplimiento"] = fecha_cumplimiento
+                                        except:
+                                            params["fecha_cumplimiento"] = None
+                                    else:
+                                        params["fecha_cumplimiento"] = None
+                                    
+                                    # Actualizar en la base de datos
+                                    with conn.begin() as conn2:
+                                        conn2.execute(text("""
+                                        UPDATE Recomendaciones 
+                                        SET Respuesta = :respuesta,
+                                            FechaCumplimiento = :fecha_cumplimiento
+                                        WHERE Expediente = :expediente
+                                    """), params)
+                                    
+                                    st.success("✅ Estatus actualizado exitosamente!")
+                                    st.balloons()
+                                    
+                                except Exception as e:
+                                    conn.rollback()
+                                    st.error(f"❌ Error al actualizar: {str(e)}")
+
+                else:
+                    st.warning("⚠️ No se encontró el expediente")
+
+    with tab3:  # Reportes
         st.subheader("📈 Reporte de Estatus")
         
         # Filtros para el reporte
