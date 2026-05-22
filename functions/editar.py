@@ -138,11 +138,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
             )
             
             mujer_agraviada_default = bool(datos_existente['datos_basicos'][8]) if datos_existente else False
-            mujer_agraviada = st.checkbox(
-                "Mujer Agraviada",
-                value=mujer_agraviada_default,
-                help="Marque si hay una mujer agraviada en el caso"
-            )
+            mujer_agraviada = mujer_agraviada_default
             
             observaciones_default = datos_existente['datos_basicos'][6] if datos_existente else ""
             observaciones = st.text_area(
