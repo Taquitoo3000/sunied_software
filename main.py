@@ -64,7 +64,7 @@ def main():
         st.stop()
 
     ip = get_client_ip()
-    usuario_email = st.context.headers.get("X-Streamlit-User", None)
+    usuario_email = st.user.get("email") if st.user else None
     usuario_email = usuario_email or "unknown"
 
     # Registrar inicio de sesión (solo una vez)
@@ -73,7 +73,7 @@ def main():
             conn,
             st.session_state.session_id,
             ip,
-            usuario_email,
+            st.session_state.expediente_editar,
             "NEW_SESSION",
             None
         )
