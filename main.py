@@ -86,7 +86,7 @@ def main():
             conn,
             st.session_state.session_id,
             ip,
-            usuario_email,
+            st.session_state.expediente_editar,
             "NAVIGATION",
             opcion_seleccionada.encode('ascii','ignore').decode()
         )
