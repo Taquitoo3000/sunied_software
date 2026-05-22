@@ -122,7 +122,7 @@ def main():
     with st.container():
         with st.popover("💬 Asistente Suny",type='primary'):
             suny.chat_asistente()
-        float_parent(css="position:fixed; bottom: 1rem; left: 70rem; z-index: 1000;")
+        float_parent(css="position:fixed; bottom: 2.1rem; left: 70rem; z-index: 1000;")
 
 def render_footer():
     st.markdown("""
