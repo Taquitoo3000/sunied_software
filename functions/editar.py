@@ -494,7 +494,9 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
     
     faltantes = [campo for campo, valor in campos_obligatorios.items() if not valor]
     if not st.session_state.autoridades_lista:
-        faltantes.append("Agregue al menos una Autoridad Señalada (Tab 2)")
+        faltantes.append("Autoridad Señalada (Tab 2)")
+    if not st.session_state.personas_lista:
+        faltantes.append("Persona Involucrada (Tab 3)")
     
     # Botones de acción
     col_btn1, col_btn2, col_btn3 = st.columns(3)
@@ -563,8 +565,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                     VALUES (:expediente, :fecha_inicio, :lugar_procedencia, :recepcion, :personas, :subprocu,
                                     :observaciones, :grupo_vulnerable, :mujer_agraviada,
                                     :organismo_emisor, :ciudad_hechos, :autoridad, :hecho, 
-                                    :dependencia, :municipio, :direccion_municipal, :alias_dependencia, 
-                                    :alias_actualizado, :alias_auxiliar)
+                                    :dependencia, :municipio, :direccion_municipal, :alias_dependencia, :alias_auxiliar)
                                     """), {
                                         'expediente': expediente,
                                         'fecha_inicio': fecha_inicio,
