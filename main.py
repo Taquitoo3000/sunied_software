@@ -64,8 +64,6 @@ def main():
         st.stop()
 
     ip = get_client_ip()
-    usuario_email = st.user.get("email") if st.user else None
-    usuario_email = usuario_email or "unknown"
 
     # Registrar inicio de sesión (solo una vez)
     if "logged" not in st.session_state:
@@ -73,7 +71,7 @@ def main():
             conn,
             st.session_state.session_id,
             ip,
-            st.session_state.expediente_editar,
+            st.session_state,
             "NEW_SESSION",
             None
         )
@@ -86,7 +84,7 @@ def main():
             conn,
             st.session_state.session_id,
             ip,
-            st.session_state.expediente_editar,
+            st.session_state,
             "NAVIGATION",
             opcion_seleccionada.encode('ascii','ignore').decode()
         )

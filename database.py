@@ -168,18 +168,18 @@ def cargar_datos_queja(engine, expediente):
             'personas': personas
         }
 
-def log_event(conn, session_id, ip, email, evento, pagina=None):
+def log_event(conn, session_id, ip, session_state, evento, pagina=None):
     try:
         with conn.begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO acceso_logs (session_id, ip, email, evento, pagina)
-                    VALUES (:session_id, :ip, :email, :evento, :pagina)
+                    INSERT INTO acceso_logs (session_id, ip, session_state, evento, pagina)
+                    VALUES (:session_id, :ip, :session_state, :evento, :pagina)
                 """),
                 {
                     "session_id": session_id,
                     "ip": ip,
-                    "email": email,
+                    "session_state": session_state,
                     "evento": evento,
                     "pagina": pagina
                 }
