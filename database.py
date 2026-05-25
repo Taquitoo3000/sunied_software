@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 from sqlalchemy import create_engine, text
+import json
     
 @st.cache_resource
 def get_connection_mysql():
@@ -170,6 +171,8 @@ def cargar_datos_queja(engine, expediente):
 
 def log_event(conn, session_id, ip, session_state, evento, pagina=None):
     try:
+        state_dict = dict(session_state)
+        state_str  = json.dumps(state_dict, ensure_ascii=False, default=str)
         with conn.begin() as connection:
             connection.execute(
                 text("""
@@ -179,7 +182,7 @@ def log_event(conn, session_id, ip, session_state, evento, pagina=None):
                 {
                     "session_id": session_id,
                     "ip": ip,
-                    "session_state": session_state,
+                    "session_state": state_str[:65535],
                     "evento": evento,
                     "pagina": pagina
                 }
