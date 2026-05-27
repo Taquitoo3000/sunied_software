@@ -34,7 +34,7 @@ def cargar_catalogos(_engine):
         catalogos['municipios']                  = leer("SELECT DISTINCT Municipio FROM Quejas WHERE Municipio IS NOT NULL ORDER BY Municipio", 'Municipio')
         catalogos['procedencia']                 = leer("SELECT DISTINCT LugarProcedencia FROM Quejas WHERE LugarProcedencia IS NOT NULL ORDER BY LugarProcedencia", 'LugarProcedencia')
         catalogos['ciudadhechos']                = leer("SELECT DISTINCT CiudadDeLosHechos FROM Quejas WHERE CiudadDeLosHechos IS NOT NULL ORDER BY CiudadDeLosHechos", 'CiudadDeLosHechos')
-        catalogos['recepcion']                   = leer("SELECT DISTINCT Recepcion FROM Quejas WHERE Recepcion IS NOT NULL ORDER BY Recepcion", 'Recepcion')
+        catalogos['recepcion']                   = ['App móvil','Correo Postal','Email','Escrita','FAX','Oficiosa','Personal','SIPRODHEG','Telefónica','Unidad móvil','Videoconferencia','Visita','Whatsapp','Otro']
         catalogos['hechos']                      = leer("SELECT DISTINCT Hecho FROM Quejas WHERE Hecho IS NOT NULL AND YEAR(FechaInicio)>2023 ORDER BY Hecho", 'Hecho')
         catalogos['hechosNR']                    = leer("SELECT DISTINCT Hecho FROM NoRecomendaciones WHERE Hecho IS NOT NULL AND YEAR(Fecha_NR)>2024 ORDER BY Hecho", 'Hecho')
         catalogos['hechosR']                     = leer("SELECT DISTINCT Causa FROM Recomendaciones WHERE Causa IS NOT NULL AND YEAR(FechaRecom)>2024 ORDER BY Causa", 'Causa')

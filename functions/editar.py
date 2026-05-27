@@ -354,7 +354,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                 )
                 calidad = st.selectbox(
                     "Calidad Penal",
-                    options=["S/D","Víctima Directa", "Víctima Indirecta", "Testigo", "Defensor","Imputado","Ofendido","Procesado","Denunciante","Sentenciado"],
+                    options=["S/D","Víctima Directa", "Víctima Indirecta", "Testigo", "Defensor","Imputado","Procesado","Denunciante","Sentenciado"],
                     index=None,
                 )
                 curp = st.text_input(
