@@ -614,7 +614,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'ocupacion': per['ocupacion'] if per['ocupacion'] else None,
                                         'sexo': per['sexo'] if per['sexo'] else None,
                                         'edad': per['edad_nivel'] if per['edad_nivel'] else None,
-                                        'edad_numero': str(per['edad']) if per['edad'] is not None and per['edad'] > 0 else None,
+                                        'edad_numero': str(per['edad']) if per['edad'] else None,
                                         'calidad_penal': per['calidad'] if per['calidad'] else None,
                                         'subprocu': subprocu if subprocu else None,
                                         'ocupacion_nivel': per['ocupacion_nivel'] if per['ocupacion_nivel'] else None,
