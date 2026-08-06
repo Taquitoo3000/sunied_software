@@ -78,7 +78,7 @@ def main():
         st.session_state.logged = True
     
     catalogos = cargar_catalogos(conn)
-    opcion_seleccionada = render_sidebar()
+    opcion_seleccionada, contenedor_filtros = render_sidebar()
     if st.session_state.last_page != opcion_seleccionada:
         log_event(
             conn,
@@ -109,10 +109,10 @@ def main():
         nueva_NR.render(conn, catalogos)
     elif opcion_seleccionada == "🔄 Modificar Estatus":
         status.render(conn, catalogos)
-    elif opcion_seleccionada == "📊 Reportes":
+    elif opcion_seleccionada == "📄 Reportes":
         reports.render(conn, catalogos)
     elif opcion_seleccionada == "📊 DashBoard":
-        dashboard.render(conn)
+        dashboard.render(conn, contenedor_filtros)
     
     # Footer
     render_footer()

@@ -107,7 +107,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
             organismo_emisor = st.selectbox(
                 "Organismo Emisor",
                 placeholder="Organismo que emite la queja",
-                options=catalogos['organismoemisor'],
+                options=[""] + catalogos['organismoemisor'],
                 index=catalogos['organismoemisor'].index(organismo_default) if organismo_default in catalogos['organismoemisor'] else None
             )
             
@@ -544,7 +544,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                                         'personas': personas,
                                         'subprocu': subprocu,
                                         'recepcion': recepcion,
-                                        'organismo_emisor': organismo_emisor,
+                                        'organismo_emisor': organismo_emisor if organismo_emisor else None,
                                         'grupo_vulnerable': grupo_vulnerable_str,
                                         'mujer_agraviada': 1 if mujer_agraviada else 0
                                     })

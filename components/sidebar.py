@@ -16,7 +16,7 @@ def render_sidebar():
             """,
             unsafe_allow_html=True
         )
-        
+        contenedor_filtros = st.container()
         st.header("Menú")
         
         # Determinar opción seleccionada
@@ -27,7 +27,7 @@ def render_sidebar():
             "➕ Nueva Recomendación",
             "➕ Nueva No Recomendación",
             "🔄 Modificar Estatus",
-            "📊 Reportes",
+            "📄 Reportes",
             "📊 DashBoard"]
         if st.session_state.get('ir_a') == "buscar":
             opcion_seleccionada = 1
@@ -58,4 +58,4 @@ def render_sidebar():
         st.divider()
         st.caption(f"Actualizado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
         
-        return opcion
+        return opcion, contenedor_filtros

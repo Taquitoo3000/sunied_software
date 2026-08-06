@@ -6,9 +6,6 @@ import json
     
 @st.cache_resource
 def get_connection_mysql():
-    """
-    Establece conexión a MySQL
-    """
     try:
         engine = create_engine(
             f"mysql+pymysql://{st.secrets['DB_USER']}:{st.secrets['DB_PASS']}"
