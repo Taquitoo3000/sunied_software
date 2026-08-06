@@ -154,16 +154,16 @@ h1 a, h2 a, h3 a, h4 a {
 }
 
 /* ===== TABS ===== */
-.stTabs [data-baseweb='tab-list'] {
+.stTabs [data-testid='stTab'] {
     gap: 8px;
 }
-.stTabs [data-baseweb='tab'] {
+.stTabs [data-testid='stTab'] {
     background-color: #2C004A !important;
     border-radius: 8px 8px 0 0 !important;
     padding: 10px 20px !important;
     font-weight: 500 !important;
 }
-.stTabs [aria-selected='true'] {
+.stTabs [data-testid='stTab'][aria-selected='true'] {
     background-color: #7E00D4 !important;
     color: white !important;
 }
