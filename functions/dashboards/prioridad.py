@@ -49,8 +49,9 @@ def cargar_data(conn):
 
 
 def render(conn,contenedor_filtros):
-    df_raw = cargar_data(conn)
-    df = calcular_indice_prioridad(df_raw)
+    with st.spinner("Cargando datos..."):
+        df_raw = cargar_data(conn)
+        df = calcular_indice_prioridad(df_raw)
 
     # ---------------------------------------------------------------------------
     # Filtros
