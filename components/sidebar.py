@@ -16,19 +16,13 @@ def render_sidebar():
             """,
             unsafe_allow_html=True
         )
+        st.badge(f"**{st.session_state.usuario}**",
+                 icon=':material/account_circle:',
+                 color='violet')
         contenedor_filtros = st.container()
         st.header("Menú")
         
         # Determinar opción seleccionada
-        opciones_menu = [
-            "🏠 Inicio",
-            "🔍 Buscar",
-            "➕ Nueva Queja",
-            "➕ Nueva Recomendación",
-            "➕ Nueva No Recomendación",
-            "🔄 Modificar Estatus",
-            "📄 Reportes",
-            "📊 DashBoard"]
         if st.session_state.get('ir_a') == "buscar":
             opcion_seleccionada = 1
         elif st.session_state.get('ir_a') == "nueva":
@@ -47,13 +41,38 @@ def render_sidebar():
             opcion_seleccionada = 7
         else:
             opcion_seleccionada = 0
-            
-        opcion = st.radio(
-            "Menú:",
-            opciones_menu,
-            index=opcion_seleccionada,
-            label_visibility="collapsed"
-        )
+
+        opciones_sg = [
+            "🏠 Inicio",
+            "🔍 Buscar",
+            "➕ Nueva Queja",
+            "➕ Nueva Recomendación",
+            "➕ Nueva No Recomendación",
+            "🔄 Modificar Estatus",
+            "📄 Reportes",
+            "📊 DashBoard"
+        ]
+        opciones_sub = [
+            "🏠 Inicio",
+            "🔍 Buscar",
+            "➕ Nueva Queja",
+            "📄 Reportes",
+            "📊 DashBoard"
+        ]
+        if st.session_state.usuario=='Secretaría General':
+            opcion = st.radio(
+                "Menú:",
+                opciones_sg,
+                index=opcion_seleccionada,
+                label_visibility="collapsed"
+            )
+        else:
+            opcion = st.radio(
+                "Menú:",
+                opciones_sub,
+                index=opcion_seleccionada,
+                label_visibility="collapsed"
+            )
 
         st.divider()
         st.caption(f"Actualizado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")

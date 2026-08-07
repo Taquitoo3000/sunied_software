@@ -7,7 +7,6 @@ from components.sidebar import render_sidebar
 from functions import home, buscar, reports, status, nueva_NR, editar, nueva_R, dashboard
 from streamlit_float import float_init, float_parent
 from datetime import datetime
-from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 # Configuración de página
 st.set_page_config(
@@ -26,9 +25,10 @@ def load_css():
 # Inicializar estado de sesión
 def init_session_state():
     if 'session_id' not in st.session_state:
-        st.session_state.session_id = str(uuid.uuid4())
+        st.session_state.session_id = uuid.uuid4().hex[:8]
         st.session_state.start_time = datetime.now()
-
+    if "autenticado" not in st.session_state:
+        st.session_state.autenticado = False
     if 'last_page' not in st.session_state:
         st.session_state.last_page = None
     if 'ir_a' not in st.session_state:
@@ -40,22 +40,13 @@ def init_session_state():
     if 'sidebar_rendered' not in st.session_state:
         st.session_state.sidebar_rendered = False
 
-def get_client_ip():
-    try:
-        headers = st.context.headers
-        # Detrás de un proxy/Streamlit Cloud
-        forwarded = headers.get("X-Forwarded-For")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        return headers.get("X-Real-Ip", "unknown")
-    except:
-        return "unknown"
-
 # Función principal
 def main():
     float_init()
     load_css()
     init_session_state()
+    if not st.session_state.autenticado:
+        home.render()
     
     # Conexión a BD
     conn = get_connection_mysql()
@@ -63,7 +54,7 @@ def main():
         st.error("No se pudo conectar a la base de datos")
         st.stop()
 
-    ip = get_client_ip()
+    ip = st.session_state.usuario
 
     # Registrar inicio de sesión (solo una vez)
     if "logged" not in st.session_state:
@@ -71,7 +62,7 @@ def main():
             conn,
             st.session_state.session_id,
             ip,
-            st.session_state,
+            {"":""},
             "NEW_SESSION",
             None
         )
@@ -79,12 +70,19 @@ def main():
     
     catalogos = cargar_catalogos(conn)
     opcion_seleccionada, contenedor_filtros = render_sidebar()
+    log_data = {
+        "expediente_editar": st.session_state.get("expediente_editar"),
+        "busqueda_principal": st.session_state.get("busqueda_principal"),
+        "busqueda_persona": st.session_state.get("busqueda_persona"),
+        "busqueda_autoridad": st.session_state.get("busqueda_autoridad"),
+        "messages": st.session_state.get("messages"),
+    }
     if st.session_state.last_page != opcion_seleccionada:
         log_event(
             conn,
             st.session_state.session_id,
             ip,
-            st.session_state,
+            log_data,
             "NAVIGATION",
             opcion_seleccionada.encode('ascii','ignore').decode()
         )
@@ -103,7 +101,7 @@ def main():
             editar.render(conn, catalogos, modo_edicion=True, expediente_editar=st.session_state.expediente_editar)
         else:
             editar.render(conn, catalogos, modo_edicion=False)
-    elif opcion_seleccionada == "➕ Nueva Recomendación":
+    elif (opcion_seleccionada == "➕ Nueva Recomendación"):
         nueva_R.render(conn, catalogos)
     elif opcion_seleccionada == "➕ Nueva No Recomendación":
         nueva_NR.render(conn, catalogos)

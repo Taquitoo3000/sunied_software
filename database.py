@@ -20,7 +20,7 @@ def get_connection_mysql():
         st.error(f"Error inesperado: {str(e)[:200]}")
         return None
 
-@st.cache_data(ttl=300)  # Cache por 5 minutos
+@st.cache_data(ttl=600)  # Cache por 10 minutos
 def cargar_catalogos(_engine):
     catalogos = {}
     
