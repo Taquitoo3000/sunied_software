@@ -503,7 +503,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                 with st.spinner("Guardando..."):
                     try:
                         with engine.begin() as conn:
-                            grupo_vulnerable_str = ','.join(grupo_vulnerable) if grupo_vulnerable else None
+                            grupo_vulnerable_str = ', '.join(grupo_vulnerable) if grupo_vulnerable else None
                             if modo_edicion:    # MODO EDICIÓN: Primero eliminar registros existentes
                                 conn.execute(text("DELETE FROM Quejas WHERE Expediente = :exp"), {'exp': expediente})
                                 conn.execute(text("DELETE FROM Quejas_Motivos WHERE Expediente = :exp"), {'exp': expediente})
