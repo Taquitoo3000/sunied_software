@@ -108,7 +108,7 @@ def render(engine, catalogos, modo_edicion, expediente_editar=""):
                 "Organismo Emisor",
                 placeholder="Organismo que emite la queja",
                 options=[""] + catalogos['organismoemisor'],
-                index=catalogos['organismoemisor'].index(organismo_default) if organismo_default in catalogos['organismoemisor'] else None
+                index=([""] + catalogos['organismoemisor']).index(organismo_default) if organismo_default in catalogos['organismoemisor'] else None
             )
             
             resumen_default = datos_existente['motivo'] if datos_existente else ""
