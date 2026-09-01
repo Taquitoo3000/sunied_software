@@ -10,7 +10,7 @@ def render(conn, catalogos):
     st.markdown("---")
     
     # Tabs para diferentes funcionalidades
-    tab1, tab2, tab3 = st.tabs(["🔍 Quejas", "🔍 Recomendacion", "📈 Reporte de Estatus"])
+    tab1, tab2 = st.tabs(["🔍 Quejas", "🔍 Recomendacion"])
     
     with tab1:  # Quejas
         st.subheader("Buscar Expediente para Modificar")
@@ -314,78 +314,3 @@ def render(conn, catalogos):
 
                 else:
                     st.warning("⚠️ No se encontró el expediente")
-
-    with tab3:  # Reportes
-        st.subheader("📈 Reporte de Estatus")
-        
-        # Filtros para el reporte
-        col_filt1, col_filt2 = st.columns(2)
-        
-        with col_filt1:
-            fecha_desde = st.text_input("Fecha desde", placeholder="DD/MM/YYYY")
-        
-        with col_filt2:
-            fecha_hasta = st.text_input("Fecha hasta", placeholder="DD/MM/YYYY", 
-                                       value=datetime.now().strftime("%d/%m/%Y"))
-        
-        # Generar reporte
-        if st.button("📊 Generar Reporte", type="primary"):
-            try:
-                
-                # Aplicar filtros de fecha
-                if fecha_desde and fecha_desde.strip():
-                    fecha_desde_dt = datetime.strptime(fecha_desde, "%d/%m/%Y")
-                
-                if fecha_hasta and fecha_hasta.strip():
-                    fecha_hasta_dt = datetime.strptime(fecha_hasta, "%d/%m/%Y")
-
-                query = """
-                SELECT 
-                    Conclusión,
-                    COUNT(*) as Cantidad
-                FROM Expediente
-                WHERE 1=1
-                    AND F_Conclusion >= :fecha_desde_dt
-                    AND F_Conclusion <= :fecha_hasta_dt
-                GROUP BY Conclusión
-                ORDER BY COUNT(*) DESC
-                """
-
-                #df_reporte = pd.read_sql_query(query, conn, params=params)
-                # Ejecutar query con cursor
-                df_reporte = pd.read_sql_query(text(query), conn, params={
-                    'fecha_desde_dt': fecha_desde_dt,
-                    'fecha_hasta_dt': fecha_hasta_dt
-                })
-
-                if not df_reporte.empty:
-                    st.write("### Resumen por Estatus")
-                    
-                    # Mostrar métricas
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.metric("Total Expedientes", df_reporte['Cantidad'].sum())
-                    with col2:
-                        estatus_comun = df_reporte.iloc[0]['Conclusión'] if len(df_reporte) > 0 else "N/A"
-                        st.metric("Estatus Más Común", estatus_comun)
-                    
-                    # Mostrar tabla
-                    st.dataframe(df_reporte, use_container_width=True)
-                    
-                    # Gráfico
-                    fig = px.pie(df_reporte, values='Cantidad', names='Conclusión')
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Botón para exportar
-                    csv = df_reporte.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Descargar Reporte CSV",
-                        data=csv,
-                        file_name=f"reporte_estatus_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                        mime="text/csv"
-                    )
-                else:
-                    st.info("No hay datos para el período seleccionado")
-                    
-            except Exception as e:
-                st.error(f"Error al generar reporte: {str(e)}")

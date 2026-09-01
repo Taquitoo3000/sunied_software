@@ -54,8 +54,9 @@ sunied/\
 │   ├── editar.py\
 │   ├── nueva_R.py\
 │   ├── nueva_NR.py\
-│   ├── editar.py\
-│   └── reports.py\
+│   ├── status.py\
+│   ├── reports.py\
+│   └── dashboard.py\
 ├── img/\
 │   ├── logo_horizontal.png\
 │   ├── loguito.ico\
@@ -71,7 +72,7 @@ python --version
 Pasos para empezar a usar
 ```bash
 pip install -r requirements.txt
-git clone https://github.com/Taquitoo3000/sunied.git
+git clone https://github.com/Taquitoo3000/sunied_software.git
 ```
 Editar `.streamlit/secrets.toml` con tus credenciales\
 La apliacion se ejecuta con:
