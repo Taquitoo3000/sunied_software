@@ -5,7 +5,6 @@ from components import suny
 from database import cargar_catalogos, get_connection_mysql, log_event
 from components.sidebar import render_sidebar
 from functions import home, buscar, reports, status, nueva_NR, editar, nueva_R, dashboard
-from streamlit_float import float_init, float_parent
 from datetime import datetime
 
 # Configuración de página
@@ -42,7 +41,6 @@ def init_session_state():
 
 # Función principal
 def main():
-    float_init()
     load_css()
     init_session_state()
     if not st.session_state.autenticado:
@@ -115,10 +113,9 @@ def main():
     # Footer
     render_footer()
 
-    with st.container():
+    with st.container(key ='chat-flotante'):
         with st.popover("💬 Asistente Suny",type='primary'):
             suny.chat_asistente()
-        float_parent(css="position:fixed; bottom: 2.1rem; left: 70rem; z-index: 1000;")
 
 def render_footer():
     st.markdown("""

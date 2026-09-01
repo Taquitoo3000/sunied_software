@@ -22,6 +22,15 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
 }
 
+/* Botón flotante */
+.st-key-chat-flotante {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: auto;
+    z-index: 1000;
+}
+
 /* ===== BOTÓN PRIMARIO (azul/morado) ===== */
 button[kind="primary"] {
     background: linear-gradient(135deg, var(--prodheg-purple) 0%, var(--prodheg-purple-light) 100%) !important;
