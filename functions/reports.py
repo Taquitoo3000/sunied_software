@@ -27,10 +27,10 @@ def render(conn, catalogos):
             # Filtros
             col_filt1, col_filt2, col_filt3, col_filt4, col_filt5 = st.columns(5)
             with col_filt1:
-                filtro_est = st.selectbox(
-                    "Filtrar por Estatus:",
-                    options=["Todos"] + catalogos['Status'],
-                    key="filtro_est"
+                filtro_sub = st.selectbox(
+                    "Filtrar por Subprocuraduría:",
+                    options=["Todos"] + catalogos['sub'],
+                    key="filtro_sub"
                 )
             with col_filt2:
                 fecha_desde = st.date_input("Fecha desde", key="fecha_desde_1")
@@ -58,8 +58,8 @@ def render(conn, catalogos):
                     ((df_filtrado['FechaInicio'] >= pd.to_datetime(fecha_desde,format="%d/%m/%Y",errors="coerce")) &
                     (df_filtrado['FechaInicio'] <= pd.to_datetime(fecha_hasta,format="%d/%m/%Y",errors="coerce")))
                 ]
-            if filtro_est != "Todos":
-                df_filtrado = df_filtrado[df_filtrado['Conclusión']==filtro_est]
+            if filtro_sub != "Todos":
+                df_filtrado = df_filtrado[df_filtrado['SubProcu']==filtro_sub]
             if filtro_mun != "Todos":
                 df_filtrado = df_filtrado[df_filtrado['Municipio'] == filtro_mun]
             if filtro_dep != "Todos":

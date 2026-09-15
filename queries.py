@@ -40,7 +40,7 @@ def buscar_expedientes(_conn, numero_expediente=None):
         if numero_expediente:
             query = """
                 SELECT 
-                    q.Expediente, q.FechaInicio, e.Conclusión, e.F_Conclusion,
+                    q.Expediente, q.FechaInicio, e.SubProcu, e.Conclusión, e.F_Conclusion,
                     q.Municipio, q.Hecho, q.DireccionMunicipal, q.Dependencia
                 FROM Quejas AS q
                 INNER JOIN Expediente AS e ON q.Expediente = e.Expediente
@@ -51,7 +51,7 @@ def buscar_expedientes(_conn, numero_expediente=None):
         else:
             query = """
                 SELECT 
-                    q.Expediente, q.FechaInicio, e.Conclusión, e.F_Conclusion,
+                    q.Expediente, q.FechaInicio, e.SubProcu, e.Conclusión, e.F_Conclusion,
                     q.Municipio, q.Hecho, q.DireccionMunicipal, q.Dependencia
                 FROM Quejas AS q
                 INNER JOIN Expediente AS e ON q.Expediente = e.Expediente
